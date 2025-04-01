@@ -3,195 +3,472 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Friends Chat</title>
+    <title>HTMLK Chat</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body {
-            font-family: Arial, sans-serif;
+        :root {
+            --primary-color: #4361ee;
+            --secondary-color: #3f37c9;
+            --accent-color: #4895ef;
+            --light-color: #f8f9fa;
+            --dark-color: #212529;
+            --success-color: #4bb543;
+            --error-color: #ff3333;
+            --warning-color: #ffcc00;
+        }
+        
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
         }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
         .container {
-            max-width: 800px;
-            margin: 0 auto;
+            max-width: 1000px;
+            margin: 20px auto;
             padding: 20px;
             background-color: white;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            border-radius: 8px;
-            margin-top: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
+        
+        h1 {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        /* Auth Section */
+        .auth-section {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 25px;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .auth-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: 500;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-tab.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #555;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border 0.3s ease;
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .btn-ghost {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        
+        .btn-ghost:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+        
+        .auth-message {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .auth-message.success {
+            background-color: rgba(75, 181, 67, 0.1);
+            color: var(--success-color);
+            display: block;
+        }
+        
+        .auth-message.error {
+            background-color: rgba(255, 51, 51, 0.1);
+            color: var(--error-color);
+            display: block;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 12px;
+            background-color: rgba(67, 97, 238, 0.1);
+            border-radius: 6px;
+        }
+        
+        .user-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .user-details {
+            flex-grow: 1;
+        }
+        
+        .user-name {
+            font-weight: 500;
+        }
+        
+        .user-email {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        /* Chat Section */
+        .room-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .room-id {
+            font-weight: 500;
+        }
+        
+        .room-id span {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .user-count {
+            display: flex;
+            align-items: center;
+        }
+        
+        .user-count i {
+            margin-right: 5px;
+            color: var(--accent-color);
+        }
+        
         .chat-container {
             height: 500px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
             overflow-y: auto;
-            padding: 10px;
-            margin-bottom: 10px;
-            background-color: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 20px;
+            background-color: white;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
         }
+        
         .message {
-            margin-bottom: 10px;
-            padding: 8px 12px;
+            margin-bottom: 15px;
+            padding: 12px 16px;
             border-radius: 18px;
             max-width: 70%;
             word-wrap: break-word;
+            position: relative;
+            animation: fadeIn 0.3s ease;
         }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
         .sent {
-            background-color: #007bff;
+            background-color: var(--primary-color);
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 4px;
         }
+        
         .received {
             background-color: #e9ecef;
             color: black;
             margin-right: auto;
             border-bottom-left-radius: 4px;
         }
+        
+        .message-sender {
+            font-weight: 600;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .sent .message-sender {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .received .message-sender {
+            color: #555;
+        }
+        
+        .message-text {
+            margin-bottom: 5px;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            text-align: right;
+            opacity: 0.8;
+        }
+        
         .input-area {
             display: flex;
             gap: 10px;
+            margin-bottom: 20px;
         }
+        
         #message-input {
             flex-grow: 1;
-            padding: 10px;
+            padding: 12px 15px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: all 0.3s ease;
         }
+        
+        #message-input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+        
         #send-button {
-            padding: 10px 20px;
-            background-color: #007bff;
+            padding: 12px 20px;
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
+        
         #send-button:hover {
-            background-color: #0056b3;
+            background-color: var(--secondary-color);
         }
-        .room-info {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-            padding: 10px;
-            background-color: #e9ecef;
-            border-radius: 4px;
+        
+        #send-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
         }
-        .user-count {
-            font-weight: bold;
-        }
+        
         .share-link {
             display: flex;
             gap: 10px;
-            margin-top: 20px;
         }
+        
         #room-url {
             flex-grow: 1;
-            padding: 8px;
+            padding: 12px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px;
+            font-size: 14px;
         }
+        
         #copy-button {
-            padding: 8px 15px;
-            background-color: #28a745;
+            padding: 12px 20px;
+            background-color: var(--accent-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
+            transition: all 0.3s ease;
         }
+        
         #copy-button:hover {
-            background-color: #218838;
+            background-color: var(--secondary-color);
         }
-        .auth-section {
-            margin-bottom: 20px;
+        
+        /* Guest Mode */
+        .guest-mode {
+            background-color: rgba(255, 204, 0, 0.1);
             padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
-        .auth-button {
-            padding: 8px 15px;
+        
+        .guest-mode i {
+            color: var(--warning-color);
             margin-right: 10px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
         }
-        #signin-button {
-            background-color: #17a2b8;
-            color: white;
-        }
-        #signout-button {
-            background-color: #dc3545;
-            color: white;
-        }
-        .user-info {
-            margin-bottom: 10px;
-            font-weight: bold;
-        }
-        #email-auth input {
-            margin-bottom: 5px;
-            display: block;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #auth-toggle a {
-            color: #007bff;
-            text-decoration: none;
-        }
-        #auth-toggle a:hover {
-            text-decoration: underline;
-        }
-        @media (min-width: 480px) {
-            #email-auth input {
-                display: inline-block;
-                width: auto;
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
             }
-        }
-        .auth-message {
-            margin-top: 10px;
-            padding: 8px;
-            border-radius: 4px;
-            display: none;
-        }
-        .success {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        .error {
-            background-color: #f8d7da;
-            color: #721c24;
+            
+            .chat-container {
+                height: 400px;
+            }
+            
+            .message {
+                max-width: 85%;
+            }
+            
+            .input-area {
+                flex-direction: column;
+            }
+            
+            #send-button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Friend Chat</h1>
+        <h1><i class="fas fa-comments"></i> HTMLK Chat</h1>
         
-        <div class="auth-section">
+        <div id="auth-section" class="auth-section">
             <div id="user-info" class="user-info" style="display: none;">
-                Signed in as: <span id="user-name"></span>
+                <img id="user-avatar" src="https://www.gravatar.com/avatar/?d=mp" alt="User Avatar">
+                <div class="user-details">
+                    <div class="user-name" id="user-name"></div>
+                    <div class="user-email" id="user-email"></div>
+                </div>
+                <button id="signout-button" class="btn-ghost">Sign Out</button>
             </div>
-            <button id="signin-button" class="auth-button">Sign In with Google</button>
-            <button id="signout-button" class="auth-button" style="display: none;">Sign Out</button>
             
-            <div id="email-auth" style="display: none; margin-top: 10px;">
-                <input type="email" id="email-input" placeholder="Email" style="padding: 8px; margin-right: 5px;">
-                <input type="password" id="password-input" placeholder="Password" style="padding: 8px; margin-right: 5px;">
-                <button id="email-signin-button" class="auth-button" style="background-color: #6c757d;">Sign In</button>
-                <button id="email-signup-button" class="auth-button" style="background-color: #6c757d;">Sign Up</button>
+            <div id="guest-mode" class="guest-mode" style="display: none;">
+                <div>
+                    <i class="fas fa-info-circle"></i>
+                    <span>You're chatting as a guest. Sign in to use your account.</span>
+                </div>
+                <button id="show-auth-button" class="btn-ghost">Sign In</button>
             </div>
-            <div id="auth-toggle" style="margin-top: 10px;">
-                <a href="#" id="toggle-email-auth">Use email/password</a>
+            
+            <div id="auth-forms">
+                <div class="auth-tabs">
+                    <div class="auth-tab active" data-tab="signin">Sign In</div>
+                    <div class="auth-tab" data-tab="signup">Sign Up</div>
+                </div>
+                
+                <div id="signin-form" class="auth-form active">
+                    <div id="signin-message" class="auth-message"></div>
+                    <div class="form-group">
+                        <label for="signin-email">Email</label>
+                        <input type="email" id="signin-email" class="form-control" placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label for="signin-password">Password</label>
+                        <input type="password" id="signin-password" class="form-control" placeholder="Enter your password">
+                    </div>
+                    <button id="signin-button" class="btn btn-block">Sign In</button>
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button id="continue-guest-button" class="btn-ghost">Continue as Guest</button>
+                    </div>
+                </div>
+                
+                <div id="signup-form" class="auth-form">
+                    <div id="signup-message" class="auth-message"></div>
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" class="form-control" placeholder="Enter your email">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" class="form-control" placeholder="Create a password (min 6 characters)">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password-confirm">Confirm Password</label>
+                        <input type="password" id="signup-password-confirm" class="form-control" placeholder="Confirm your password">
+                    </div>
+                    <button id="signup-button" class="btn btn-block">Sign Up</button>
+                </div>
             </div>
-            <div id="auth-message" class="auth-message"></div>
         </div>
         
         <div class="room-info">
-            <div>Room: <span id="room-id-display"></span></div>
-            <div>Users online: <span id="user-count" class="user-count">0</span>/32</div>
+            <div class="room-id">Room: <span id="room-id-display"></span></div>
+            <div class="user-count">
+                <i class="fas fa-users"></i>
+                <span id="user-count">0</span>/32
+            </div>
         </div>
         
         <div id="chat-container" class="chat-container">
@@ -200,12 +477,16 @@
         
         <div class="input-area">
             <input type="text" id="message-input" placeholder="Type your message..." disabled>
-            <button id="send-button" disabled>Send</button>
+            <button id="send-button" disabled>
+                <i class="fas fa-paper-plane"></i> Send
+            </button>
         </div>
         
         <div class="share-link">
             <input type="text" id="room-url" readonly>
-            <button id="copy-button">Copy Link</button>
+            <button id="copy-button">
+                <i class="fas fa-copy"></i> Copy
+            </button>
         </div>
     </div>
 
