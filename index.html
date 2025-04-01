@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FireChat - Complete Chat System</title>
+    <title>FireChat - Complete Chat Solution</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -20,6 +20,27 @@
             --dark-color: #202124;
             --light-color: #f8f9fa;
             --gray-color: #dadce0;
+            --bg-color: #ffffff;
+            --text-color: #000000;
+            --message-bg: #ffffff;
+            --message-sent-bg: #4285f4;
+            --message-text: #000000;
+            --message-sent-text: #ffffff;
+            --sidebar-bg: #ffffff;
+            --input-bg: #ffffff;
+            --success-color: #34a853;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --message-bg: #1e1e1e;
+            --message-sent-bg: #0d47a1;
+            --message-text: #ffffff;
+            --message-sent-text: #ffffff;
+            --sidebar-bg: #1e1e1e;
+            --input-bg: #2d2d2d;
+            --gray-color: #444444;
         }
         
         * {
@@ -27,11 +48,12 @@
             margin: 0;
             padding: 0;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         body {
-            background-color: var(--light-color);
-            color: var(--dark-color);
+            background-color: var(--bg-color);
+            color: var(--text-color);
             line-height: 1.6;
         }
         
@@ -51,10 +73,11 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            background-color: var(--bg-color);
         }
         
         .auth-card {
-            background: white;
+            background: var(--sidebar-bg);
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 30px;
@@ -76,6 +99,7 @@
             display: block;
             margin-bottom: 5px;
             font-weight: 500;
+            color: var(--text-color);
         }
         
         .auth-form input {
@@ -84,6 +108,8 @@
             border: 1px solid var(--gray-color);
             border-radius: 4px;
             font-size: 16px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
         }
         
         .auth-form button {
@@ -105,6 +131,7 @@
         .auth-toggle {
             text-align: center;
             margin-top: 20px;
+            color: var(--text-color);
         }
         
         .auth-toggle a {
@@ -132,7 +159,7 @@
         }
         
         .sidebar {
-            background: white;
+            background: var(--sidebar-bg);
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 20px;
@@ -142,7 +169,7 @@
         .chat-area {
             display: flex;
             flex-direction: column;
-            background: white;
+            background: var(--sidebar-bg);
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             overflow: hidden;
@@ -161,12 +188,13 @@
             flex: 1;
             padding: 20px;
             overflow-y: auto;
-            background-color: #f5f5f5;
+            background-color: var(--bg-color);
         }
         
         .message {
             margin-bottom: 15px;
             max-width: 70%;
+            position: relative;
         }
         
         .message.sent {
@@ -182,20 +210,47 @@
             display: inline-block;
             padding: 10px 15px;
             border-radius: 18px;
-            background-color: white;
+            background-color: var(--message-bg);
+            color: var(--message-text);
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
             word-break: break-word;
+            position: relative;
         }
         
         .message.sent .message-content {
-            background-color: var(--primary-color);
-            color: white;
+            background-color: var(--message-sent-bg);
+            color: var(--message-sent-text);
         }
         
         .message-info {
             font-size: 12px;
-            color: #666;
+            color: var(--text-color);
             margin-top: 5px;
+            opacity: 0.7;
+        }
+        
+        .message-actions {
+            position: absolute;
+            right: 0;
+            top: 0;
+            display: none;
+            background: var(--sidebar-bg);
+            border-radius: 15px;
+            padding: 5px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        
+        .message:hover .message-actions {
+            display: flex;
+        }
+        
+        .message-action {
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            cursor: pointer;
+            margin: 0 3px;
+            font-size: 12px;
         }
         
         .message-image {
@@ -209,7 +264,7 @@
         .chat-input {
             display: flex;
             padding: 15px;
-            background-color: white;
+            background-color: var(--sidebar-bg);
             border-top: 1px solid var(--gray-color);
         }
         
@@ -220,6 +275,8 @@
             border-radius: 20px;
             font-size: 16px;
             margin-right: 10px;
+            background-color: var(--input-bg);
+            color: var(--text-color);
         }
         
         .chat-input button {
@@ -263,10 +320,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            color: var(--text-color);
         }
         
         .room-item:hover {
-            background-color: var(--light-color);
+            background-color: var(--gray-color);
         }
         
         .room-item.active {
@@ -284,32 +342,6 @@
             display: flex;
             justify-content: center;
             align-items: center;
-        }
-        
-        .create-room {
-            margin-top: 20px;
-        }
-        
-        .create-room input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--gray-color);
-            border-radius: 4px;
-            margin-bottom: 10px;
-        }
-        
-        .create-room button {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--secondary-color);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        
-        .create-room button:hover {
-            background-color: #2d9249;
         }
         
         /* User Profile */
@@ -345,16 +377,7 @@
         
         .user-info {
             flex: 1;
-        }
-        
-        .user-info h3 {
-            margin-bottom: 5px;
-            cursor: pointer;
-        }
-        
-        .user-info p {
-            color: #666;
-            font-size: 14px;
+            color: var(--text-color);
         }
         
         .logout-btn {
@@ -367,173 +390,64 @@
             margin-top: 10px;
         }
         
-        .logout-btn:hover {
-            background-color: #d33426;
+        /* Typing indicator */
+        .typing-indicator {
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin: 5px 0;
         }
         
-        /* Profile Section */
-        .profile-section {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f9f9f9;
-            border-radius: 8px;
-            display: none;
+        /* Reactions */
+        .reactions {
+            display: flex;
+            margin-top: 5px;
         }
         
-        .profile-section.active {
-            display: block;
+        .reaction {
+            background: var(--bg-color);
+            border-radius: 15px;
+            padding: 2px 6px;
+            margin-right: 5px;
+            font-size: 12px;
+            cursor: pointer;
         }
         
-        .profile-form .form-group {
-            margin-bottom: 15px;
-        }
-        
-        .profile-form label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        .profile-form input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid var(--gray-color);
-            border-radius: 4px;
-            font-size: 16px;
-        }
-        
-        .profile-form button {
-            width: 100%;
-            padding: 10px;
-            background-color: var(--primary-color);
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 4px;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 20px;
             cursor: pointer;
-            margin-top: 10px;
-        }
-        
-        .profile-form button:hover {
-            background-color: #3367d6;
-        }
-        
-        /* Tabs */
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid var(--gray-color);
-            margin-bottom: 15px;
-        }
-        
-        .tab {
-            padding: 10px 15px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        
-        .tab.active {
-            border-bottom: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-        
-        .profile-tab {
-            padding: 10px 15px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        
-        .profile-tab.active {
-            border-bottom: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-        
-        .tab-content {
-            display: none;
-        }
-        
-        .tab-content.active {
-            display: block;
-        }
-        
-        /* Activity History */
-        .activity-item {
-            padding: 10px;
-            border-bottom: 1px solid var(--gray-color);
-            font-size: 14px;
-        }
-        
-        .activity-time {
-            color: #666;
-            font-size: 12px;
-            margin-top: 3px;
-        }
-        
-        /* Modal */
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            display: flex;
-            justify-content: center;
-            align-items: center;
             z-index: 1000;
-        }
-        
-        .modal-content {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            max-width: 500px;
-            width: 90%;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-header {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            justify-content: center;
         }
         
-        .modal-header h2 {
-            color: var(--primary-color);
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
-        .close-modal {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #666;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .chat-container {
-                grid-template-columns: 1fr;
-            }
-            
-            .sidebar {
-                display: none;
-            }
-            
-            .sidebar.active {
-                display: block;
-            }
-            
-            .mobile-menu-btn {
-                display: block;
-                background: none;
-                border: none;
-                font-size: 20px;
-                color: white;
-                cursor: pointer;
-            }
+        .toast.show {
+            opacity: 1;
         }
         
         /* Loading spinner */
@@ -551,32 +465,20 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-
-        /* Toast notification */
-        .toast {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #333;
-            color: white;
-            padding: 12px 24px;
-            border-radius: 4px;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .toast.show {
-            opacity: 1;
-        }
-
-        /* Room URL in activity */
-        .room-url {
-            font-size: 12px;
-            color: var(--primary-color);
-            word-break: break-all;
-            margin-top: 5px;
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .chat-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .sidebar.active {
+                display: block;
+            }
         }
     </style>
 </head>
@@ -640,7 +542,7 @@
                     <a id="show-login-from-forgot">Back to login</a>
                 </div>
                 <div id="forgot-error" class="error-message"></div>
-                <div id="forgot-success" style="color: var(--secondary-color); margin-top: 10px;"></div>
+                <div id="forgot-success" style="color: var(--success-color); margin-top: 10px;"></div>
             </div>
         </div>
     </div>
@@ -663,46 +565,19 @@
                     </div>
                 </div>
                 
-                <!-- Tabs -->
-                <div class="tabs">
-                    <div class="tab active" data-tab="rooms">Chat Rooms</div>
-                    <div class="tab" data-tab="activity">Activity</div>
-                    <div class="profile-tab" data-tab="profile">Profile</div>
+                <!-- Search -->
+                <div class="search-container" style="margin-bottom: 15px;">
+                    <input type="text" id="search-input" placeholder="Search messages..." class="search-input" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid var(--gray-color); background-color: var(--input-bg); color: var(--text-color);">
                 </div>
                 
-                <!-- Rooms Tab -->
-                <div id="rooms-tab" class="tab-content active">
-                    <div class="create-room">
-                        <input type="text" id="new-room-name" placeholder="Enter room name">
-                        <button id="create-room-btn">Create Room</button>
-                    </div>
-                    <ul class="room-list" id="room-list">
-                        <!-- Rooms will be added here dynamically -->
-                    </ul>
+                <!-- Room List -->
+                <div class="create-room">
+                    <input type="text" id="new-room-name" placeholder="Enter room name" style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 4px; border: 1px solid var(--gray-color); background-color: var(--input-bg); color: var(--text-color);">
+                    <button id="create-room-btn" style="width: 100%; padding: 8px; background-color: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer;">Create Room</button>
                 </div>
-                
-                <!-- Activity Tab -->
-                <div id="activity-tab" class="tab-content">
-                    <div id="activity-list">
-                        <!-- Activity items will be added here dynamically -->
-                    </div>
-                </div>
-                
-                <!-- Profile Tab -->
-                <div id="profile-tab" class="tab-content">
-                    <div class="profile-form">
-                        <div class="form-group">
-                            <label for="edit-name">Display Name</label>
-                            <input type="text" id="edit-name" placeholder="Your name">
-                        </div>
-                        <div class="form-group">
-                            <label for="edit-avatar">Profile Picture</label>
-                            <input type="file" id="edit-avatar" accept="image/*">
-                        </div>
-                        <button id="save-profile">Save Changes</button>
-                        <div id="profile-message" class="error-message"></div>
-                    </div>
-                </div>
+                <ul class="room-list" id="room-list">
+                    <!-- Rooms will be added here dynamically -->
+                </ul>
             </div>
             
             <!-- Chat Area -->
@@ -720,11 +595,15 @@
                     <!-- Messages will be added here dynamically -->
                 </div>
                 
+                <!-- Typing indicator -->
+                <div id="typing-indicator" class="typing-indicator hidden"></div>
+                
                 <div class="chat-input">
                     <input type="text" id="message-input" placeholder="Type your message..." disabled>
                     <div class="action-buttons">
                         <button id="attach-file-btn" title="Attach file"><i class="fas fa-paperclip"></i></button>
                         <button id="send-image-btn" title="Send image"><i class="fas fa-image"></i></button>
+                        <button id="add-reaction-btn" title="Add reaction"><i class="far fa-smile"></i></button>
                     </div>
                     <button id="send-message-btn"><i class="fas fa-paper-plane"></i></button>
                 </div>
@@ -758,6 +637,24 @@
         </div>
     </div>
     
+    <!-- Reaction Picker Modal -->
+    <div id="reaction-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Reaction</h2>
+                <button class="close-modal" id="close-reaction-modal">&times;</button>
+            </div>
+            <div class="reactions-container" style="display: flex; justify-content: space-around; padding: 15px;">
+                <button class="reaction-emoji" data-emoji="👍">👍</button>
+                <button class="reaction-emoji" data-emoji="❤️">❤️</button>
+                <button class="reaction-emoji" data-emoji="😂">😂</button>
+                <button class="reaction-emoji" data-emoji="😮">😮</button>
+                <button class="reaction-emoji" data-emoji="😢">😢</button>
+                <button class="reaction-emoji" data-emoji="🎉">🎉</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Loading Spinner -->
     <div id="loading-spinner" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
         <div class="spinner"></div>
@@ -766,17 +663,22 @@
     <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
+    <!-- Theme Toggle Button -->
+    <button id="theme-toggle" class="theme-toggle hidden">
+        <i class="fas fa-moon"></i>
+    </button>
+
     <script>
         // Firebase configuration - Replace with your actual config
         const firebaseConfig = {
-            apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
-  authDomain: "friends-195c7.firebaseapp.com",
-  databaseURL: "https://friends-195c7-default-rtdb.firebaseio.com",
-  projectId: "friends-195c7",
-  storageBucket: "friends-195c7.firebasestorage.app",
-  messagingSenderId: "487210823099",
-  appId: "1:487210823099:web:30fb0fb91cd484486e289e",
-  measurementId: "G-PSLN4J6DGL"
+                apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
+            authDomain: "friends-195c7.firebaseapp.com",
+            databaseURL: "https://friends-195c7-default-rtdb.firebaseio.com",
+            projectId: "friends-195c7",
+            storageBucket: "friends-195c7.firebasestorage.app",
+            messagingSenderId: "487210823099",
+            appId: "1:487210823099:web:30fb0fb91cd484486e289e",
+            measurementId: "G-PSLN4J6DGL"
         };
         
         // Initialize Firebase
@@ -826,13 +728,6 @@
         const avatarText = document.getElementById('avatar-text');
         const avatarImage = document.getElementById('avatar-image');
         
-        // Profile Elements
-        const editName = document.getElementById('edit-name');
-        const editAvatar = document.getElementById('edit-avatar');
-        const saveProfileBtn = document.getElementById('save-profile');
-        const profileMessage = document.getElementById('profile-message');
-        const profileTab = document.querySelector('.profile-tab');
-        
         // Room Elements
         const newRoomName = document.getElementById('new-room-name');
         const createRoomBtn = document.getElementById('create-room-btn');
@@ -848,32 +743,30 @@
         const sendMessageBtn = document.getElementById('send-message-btn');
         const attachFileBtn = document.getElementById('attach-file-btn');
         const sendImageBtn = document.getElementById('send-image-btn');
+        const addReactionBtn = document.getElementById('add-reaction-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
         
-        // Tabs
-        const tabs = document.querySelectorAll('.tab');
-        const profileTabs = document.querySelectorAll('.profile-tab');
-        const tabContents = document.querySelectorAll('.tab-content');
-        
-        // Activity
-        const activityList = document.getElementById('activity-list');
+        // Search
+        const searchInput = document.getElementById('search-input');
         
         // Modals
         const imageUploadModal = document.getElementById('image-upload-modal');
         const fileUploadModal = document.getElementById('file-upload-modal');
+        const reactionModal = document.getElementById('reaction-modal');
+        
+        // Modal buttons
         const closeImageModalBtn = document.getElementById('close-image-modal');
         const closeFileModalBtn = document.getElementById('close-file-modal');
-        const imageUpload = document.getElementById('image-upload');
-        const fileUpload = document.getElementById('file-upload');
-        const uploadImageBtn = document.getElementById('upload-image-btn');
-        const uploadFileBtn = document.getElementById('upload-file-btn');
-        const imageUploadError = document.getElementById('image-upload-error');
-        const fileUploadError = document.getElementById('file-upload-error');
+        const closeReactionModalBtn = document.getElementById('close-reaction-modal');
         
         // Loading Spinner
         const loadingSpinner = document.getElementById('loading-spinner');
         
         // Toast Notification
         const toast = document.getElementById('toast');
+        
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
         
         // Global Variables
         let currentUser = null;
@@ -882,13 +775,17 @@
         let roomsUnsubscribe = null;
         let messagesUnsubscribe = null;
         let presenceUnsubscribe = null;
+        let typingUnsubscribe = null;
         let roomUsers = {};
         let userProfilePhotoUrl = null;
+        let isTyping = false;
+        let typingTimeout = null;
         
         // Initialize the app
         function init() {
             setupEventListeners();
             checkAuthState();
+            initTheme();
         }
         
         // Set up event listeners
@@ -924,27 +821,6 @@
             resetPasswordBtn.addEventListener('click', resetPassword);
             logoutBtn.addEventListener('click', logoutUser);
             
-            // Profile buttons
-            saveProfileBtn.addEventListener('click', updateProfile);
-            
-            // Tab switching
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabId = tab.getAttribute('data-tab');
-                    switchTab(tabId);
-                });
-            });
-            
-            profileTabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabId = tab.getAttribute('data-tab');
-                    switchTab(tabId);
-                    if (tabId === 'profile') {
-                        loadProfileData();
-                    }
-                });
-            });
-            
             // Chat buttons
             createRoomBtn.addEventListener('click', createRoom);
             sendMessageBtn.addEventListener('click', sendMessage);
@@ -952,6 +828,20 @@
                 if (e.key === 'Enter') {
                     sendMessage();
                 }
+            });
+            
+            // Typing detection
+            messageInput.addEventListener('input', () => {
+                if (!isTyping && currentRoomId) {
+                    isTyping = true;
+                    updateTypingStatus(true);
+                }
+                
+                clearTimeout(typingTimeout);
+                typingTimeout = setTimeout(() => {
+                    isTyping = false;
+                    updateTypingStatus(false);
+                }, 2000);
             });
             
             // Room actions
@@ -967,6 +857,11 @@
                 imageUploadModal.classList.remove('hidden');
             });
             
+            addReactionBtn.addEventListener('click', () => {
+                reactionModal.classList.remove('hidden');
+            });
+            
+            // Modal close buttons
             closeImageModalBtn.addEventListener('click', () => {
                 imageUploadModal.classList.add('hidden');
                 imageUpload.value = '';
@@ -979,8 +874,48 @@
                 fileUploadError.textContent = '';
             });
             
-            uploadImageBtn.addEventListener('click', uploadImage);
-            uploadFileBtn.addEventListener('click', uploadFile);
+            closeReactionModalBtn.addEventListener('click', () => {
+                reactionModal.classList.add('hidden');
+            });
+            
+            // Reaction emoji buttons
+            document.querySelectorAll('.reaction-emoji').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const emoji = e.target.getAttribute('data-emoji');
+                    addReaction(emoji);
+                    reactionModal.classList.add('hidden');
+                });
+            });
+            
+            // Theme toggle
+            themeToggle.addEventListener('click', toggleTheme);
+            
+            // Search functionality
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.trim().toLowerCase();
+                if (searchTerm && currentRoomId) {
+                    searchMessages(searchTerm);
+                } else {
+                    loadMessages(currentRoomId);
+                }
+            });
+        }
+        
+        // Initialize theme from localStorage
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            themeToggle.innerHTML = savedTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+            themeToggle.classList.remove('hidden');
+        }
+        
+        // Toggle between light/dark theme
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeToggle.innerHTML = newTheme === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
         }
         
         // Clear all auth error messages
@@ -998,28 +933,41 @@
                     // User is signed in
                     currentUser = user;
                     setupUserProfile(user);
-                    authContainer.classList.add('hidden');
-                    chatContainer.classList.remove('hidden');
+                    showChatUI();
                     loadUserData();
                     loadRooms();
                     trackUserPresence();
                     checkUrlForRoom();
                 } else {
                     // User is signed out
-                    currentUser = null;
-                    authContainer.classList.remove('hidden');
-                    chatContainer.classList.add('hidden');
-                    loginForm.classList.remove('hidden');
-                    signupForm.classList.add('hidden');
-                    forgotPasswordForm.classList.add('hidden');
-                    clearAuthErrors();
-                    
-                    // Clean up any existing subscriptions
-                    if (roomsUnsubscribe) roomsUnsubscribe();
-                    if (messagesUnsubscribe) messagesUnsubscribe();
-                    if (presenceUnsubscribe) presenceUnsubscribe();
+                    showAuthUI();
                 }
             });
+        }
+        
+        // Show chat UI
+        function showChatUI() {
+            authContainer.classList.add('hidden');
+            chatContainer.classList.remove('hidden');
+            themeToggle.classList.remove('hidden');
+        }
+        
+        // Show auth UI
+        function showAuthUI() {
+            currentUser = null;
+            authContainer.classList.remove('hidden');
+            chatContainer.classList.add('hidden');
+            themeToggle.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            signupForm.classList.add('hidden');
+            forgotPasswordForm.classList.add('hidden');
+            clearAuthErrors();
+            
+            // Clean up any existing subscriptions
+            if (roomsUnsubscribe) roomsUnsubscribe();
+            if (messagesUnsubscribe) messagesUnsubscribe();
+            if (presenceUnsubscribe) presenceUnsubscribe();
+            if (typingUnsubscribe) typingUnsubscribe();
         }
         
         // Set up user profile
@@ -1056,14 +1004,6 @@
             });
         }
         
-        // Load profile data for editing
-        function loadProfileData() {
-            if (!currentUser) return;
-            
-            editName.value = currentUser.displayName || '';
-            profileMessage.textContent = '';
-        }
-        
         // Update avatar display
         function updateAvatar(photoURL) {
             if (photoURL) {
@@ -1074,109 +1014,6 @@
                 avatarImage.classList.add('hidden');
                 avatarText.classList.remove('hidden');
             }
-        }
-        
-        // Update profile
-        function updateProfile() {
-            const newName = editName.value.trim();
-            const file = editAvatar.files[0];
-            
-            if (!newName) {
-                profileMessage.textContent = 'Please enter a name';
-                return;
-            }
-            
-            showLoading(true);
-            profileMessage.textContent = '';
-            
-            let updatePromise;
-            
-            if (file) {
-                // Upload new avatar
-                const storageRef = storage.ref(`profile_pictures/${currentUser.uid}`);
-                updatePromise = storageRef.put(file)
-                    .then(snapshot => snapshot.ref.getDownloadURL())
-                    .then(url => {
-                        return Promise.all([
-                            currentUser.updateProfile({
-                                displayName: newName,
-                                photoURL: url
-                            }),
-                            db.collection('users').doc(currentUser.uid).update({
-                                name: newName,
-                                photoURL: url,
-                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                            })
-                        ]);
-                    });
-            } else {
-                // Just update name
-                updatePromise = Promise.all([
-                    currentUser.updateProfile({
-                        displayName: newName
-                    }),
-                    db.collection('users').doc(currentUser.uid).update({
-                        name: newName,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    })
-                ]);
-            }
-            
-            updatePromise
-                .then(() => {
-                    profileMessage.style.color = 'var(--secondary-color)';
-                    profileMessage.textContent = 'Profile updated successfully!';
-                    // Update UI
-                    userName.textContent = newName;
-                    if (file) {
-                        // Update avatar display
-                        loadUserData();
-                    }
-                    
-                    // Clear file input
-                    editAvatar.value = '';
-                    
-                    // Hide success message after 3 seconds
-                    setTimeout(() => {
-                        profileMessage.textContent = '';
-                    }, 3000);
-                })
-                .catch(error => {
-                    console.error('Error updating profile:', error);
-                    profileMessage.textContent = getAuthErrorMessage(error);
-                })
-                .finally(() => {
-                    showLoading(false);
-                });
-        }
-        
-        // Switch between tabs
-        function switchTab(tabId) {
-            // Handle regular tabs
-            tabs.forEach(tab => {
-                if (tab.getAttribute('data-tab') === tabId) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            
-            // Handle profile tab
-            profileTabs.forEach(tab => {
-                if (tab.getAttribute('data-tab') === tabId) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            
-            tabContents.forEach(content => {
-                if (content.id === `${tabId}-tab`) {
-                    content.classList.add('active');
-                } else {
-                    content.classList.remove('active');
-                }
-            });
         }
         
         // Login user
@@ -1294,11 +1131,11 @@
                     currentRoomData = null;
                     chatMessages.innerHTML = '';
                     roomList.innerHTML = '';
-                    activityList.innerHTML = '';
                     currentRoomName.textContent = 'Select a chat room';
                     roomUsersCount.textContent = '0 users';
                     messageInput.disabled = true;
                     deleteRoomBtn.classList.add('hidden');
+                    typingIndicator.classList.add('hidden');
                 })
                 .catch(error => {
                     console.error('Logout error:', error);
@@ -1363,9 +1200,6 @@
                         
                         roomList.appendChild(roomItem);
                     });
-                    
-                    // Load activity history
-                    loadActivityHistory();
                 }, error => {
                     console.error('Error loading rooms:', error);
                 });
@@ -1408,15 +1242,11 @@
                         showToast(`Room created! Share this link: ${roomUrl}`);
                     });
                 
-                // Join the new room
                 joinRoom(roomId, {
                     name: roomName,
                     createdBy: currentUser.uid,
                     members: [currentUser.uid]
                 });
-                
-                // Record activity
-                recordActivity(`Created room "${roomName}"`);
             })
             .catch(error => {
                 console.error('Error creating room:', error);
@@ -1454,6 +1284,7 @@
             // Unsubscribe from previous listeners if they exist
             if (messagesUnsubscribe) messagesUnsubscribe();
             if (presenceUnsubscribe) presenceUnsubscribe();
+            if (typingUnsubscribe) typingUnsubscribe();
             
             // Update UI
             currentRoomId = roomId;
@@ -1482,6 +1313,9 @@
             // Track presence in this room
             trackRoomPresence(roomId);
             
+            // Track typing indicators
+            trackTypingIndicators(roomId);
+            
             // Add user to room members if not already a member
             const roomRef = db.collection('rooms').doc(roomId);
             roomRef.get().then(doc => {
@@ -1494,13 +1328,6 @@
                         });
                     }
                 }
-            })
-            .then(() => {
-                // Record activity
-                recordActivity(`Joined room "${roomData.name}"`);
-            })
-            .catch(error => {
-                console.error('Error joining room:', error);
             });
         }
         
@@ -1533,14 +1360,45 @@
                 });
         }
         
+        // Search messages in current room
+        function searchMessages(searchTerm) {
+            if (!currentRoomId) return;
+            
+            db.collection('rooms').doc(currentRoomId)
+                .collection('messages')
+                .orderBy('timestamp')
+                .get()
+                .then(snapshot => {
+                    chatMessages.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const message = doc.data();
+                        if (message.text && message.text.toLowerCase().includes(searchTerm)) {
+                            displayMessage(message);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error searching messages:', error);
+                });
+        }
+        
         // Display a message
         function displayMessage(message) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            messageDiv.setAttribute('data-message-id', message.id || '');
             
             let contentHtml = '';
             if (message.type === 'text') {
-                contentHtml = `<div class="message-content">${message.text}</div>`;
+                contentHtml = `
+                    <div class="message-content">${message.text}</div>
+                    <div class="message-actions">
+                        ${message.senderId === currentUser.uid ? 
+                          `<button class="message-action edit-btn" title="Edit"><i class="fas fa-edit"></i></button>
+                           <button class="message-action delete-btn" title="Delete"><i class="fas fa-trash"></i></button>` : ''}
+                        <button class="message-action react-btn" title="React"><i class="far fa-smile"></i></button>
+                    </div>
+                `;
             } else if (message.type === 'image') {
                 contentHtml = `
                     <div class="message-content">Image shared</div>
@@ -1553,14 +1411,204 @@
                 `;
             }
             
+            // Add reactions if they exist
+            let reactionsHtml = '';
+            if (message.reactions && Object.keys(message.reactions).length > 0) {
+                reactionsHtml = '<div class="reactions">';
+                for (const [emoji, users] of Object.entries(message.reactions)) {
+                    reactionsHtml += `<span class="reaction" data-emoji="${emoji}">${emoji} ${users.length}</span>`;
+                }
+                reactionsHtml += '</div>';
+            }
+            
             messageDiv.innerHTML = `
                 ${contentHtml}
+                ${reactionsHtml}
                 <div class="message-info">
                     ${message.senderName} • ${formatTime(message.timestamp?.toDate())}
+                    ${message.edited ? '(edited)' : ''}
                 </div>
             `;
             
+            // Add event listeners to action buttons
+            if (message.senderId === currentUser.uid) {
+                const editBtn = messageDiv.querySelector('.edit-btn');
+                const deleteBtn = messageDiv.querySelector('.delete-btn');
+                
+                if (editBtn) {
+                    editBtn.addEventListener('click', () => editMessage(messageDiv, message));
+                }
+                
+                if (deleteBtn) {
+                    deleteBtn.addEventListener('click', () => deleteMessage(message));
+                }
+            }
+            
+            const reactBtn = messageDiv.querySelector('.react-btn');
+            if (reactBtn) {
+                reactBtn.addEventListener('click', () => showReactionModal(message));
+            }
+            
+            // Add event listeners to existing reactions
+            const reactionElements = messageDiv.querySelectorAll('.reaction');
+            reactionElements.forEach(el => {
+                el.addEventListener('click', () => {
+                    const emoji = el.getAttribute('data-emoji');
+                    toggleReaction(message, emoji);
+                });
+            });
+            
             chatMessages.appendChild(messageDiv);
+        }
+        
+        // Edit a message
+        function editMessage(messageDiv, message) {
+            const messageContent = messageDiv.querySelector('.message-content');
+            const originalText = messageContent.textContent;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = originalText;
+            input.style.width = '100%';
+            input.style.padding = '5px';
+            input.style.borderRadius = '4px';
+            input.style.border = '1px solid var(--gray-color)';
+            input.style.backgroundColor = 'var(--input-bg)';
+            input.style.color = 'var(--text-color)';
+            
+            messageContent.replaceWith(input);
+            input.focus();
+            
+            const handleEdit = (e) => {
+                if (e.key === 'Enter' || e.type === 'blur') {
+                    const newText = input.value.trim();
+                    if (newText && newText !== originalText) {
+                        updateMessage(message, newText);
+                    } else {
+                        input.replaceWith(messageContent);
+                    }
+                    input.removeEventListener('keypress', handleEdit);
+                    input.removeEventListener('blur', handleEdit);
+                }
+            };
+            
+            input.addEventListener('keypress', handleEdit);
+            input.addEventListener('blur', handleEdit);
+        }
+        
+        // Update message in Firestore
+        function updateMessage(message, newText) {
+            if (!currentRoomId) return;
+            
+            db.collection('rooms').doc(currentRoomId)
+                .collection('messages').doc(message.id)
+                .update({
+                    text: newText,
+                    edited: true,
+                    editedAt: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .catch(error => {
+                    console.error('Error updating message:', error);
+                    showToast('Failed to update message');
+                });
+        }
+        
+        // Delete a message
+        function deleteMessage(message) {
+            if (!currentRoomId || !confirm('Are you sure you want to delete this message?')) {
+                return;
+            }
+            
+            db.collection('rooms').doc(currentRoomId)
+                .collection('messages').doc(message.id)
+                .delete()
+                .catch(error => {
+                    console.error('Error deleting message:', error);
+                    showToast('Failed to delete message');
+                });
+        }
+        
+        // Show reaction picker modal
+        function showReactionModal(message) {
+            reactionModal.classList.remove('hidden');
+            
+            // Store the current message for reaction
+            reactionModal.setAttribute('data-message-id', message.id);
+        }
+        
+        // Add reaction to a message
+        function addReaction(emoji) {
+            const messageId = reactionModal.getAttribute('data-message-id');
+            if (!currentRoomId || !messageId) return;
+            
+            const messageRef = db.collection('rooms').doc(currentRoomId)
+                .collection('messages').doc(messageId);
+            
+            // Use Firestore's arrayUnion to add the user to the reaction
+            db.runTransaction((transaction) => {
+                return transaction.get(messageRef).then((doc) => {
+                    if (!doc.exists) throw 'Document does not exist!';
+                    
+                    const data = doc.data();
+                    const reactions = data.reactions || {};
+                    const users = reactions[emoji] || [];
+                    
+                    // If user already reacted with this emoji, remove their reaction
+                    if (users.includes(currentUser.uid)) {
+                        if (users.length === 1) {
+                            // Remove the emoji entirely if this was the only reaction
+                            delete reactions[emoji];
+                        } else {
+                            // Just remove this user's reaction
+                            reactions[emoji] = users.filter(uid => uid !== currentUser.uid);
+                        }
+                    } else {
+                        // Add the user's reaction
+                        reactions[emoji] = [...users, currentUser.uid];
+                    }
+                    
+                    transaction.update(messageRef, { reactions });
+                });
+            }).catch(error => {
+                console.error('Error adding reaction:', error);
+            });
+        }
+        
+        // Toggle reaction (add or remove)
+        function toggleReaction(message, emoji) {
+            if (!currentRoomId) return;
+            
+            const messageRef = db.collection('rooms').doc(currentRoomId)
+                .collection('messages').doc(message.id);
+            
+            // Use Firestore's arrayUnion to add the user to the reaction
+            db.runTransaction((transaction) => {
+                return transaction.get(messageRef).then((doc) => {
+                    if (!doc.exists) throw 'Document does not exist!';
+                    
+                    const data = doc.data();
+                    const reactions = data.reactions || {};
+                    const users = reactions[emoji] || [];
+                    
+                    // If user already reacted with this emoji, remove their reaction
+                    if (users.includes(currentUser.uid)) {
+                        if (users.length === 1) {
+                            // Remove the emoji entirely if this was the only reaction
+                            delete reactions[emoji];
+                        } else {
+                            // Just remove this user's reaction
+                            reactions[emoji] = users.filter(uid => uid !== currentUser.uid);
+                        }
+                    } else {
+                        // Add the user's reaction
+                        reactions[emoji] = [...users, currentUser.uid];
+                    }
+                    
+                    transaction.update(messageRef, { reactions });
+                });
+            }).catch(error => {
+                console.error('Error toggling reaction:', error);
+            });
         }
         
         // Send a message
@@ -1654,9 +1702,6 @@
                     .then(() => {
                         imageUpload.value = '';
                         imageUploadModal.classList.add('hidden');
-                        
-                        // Record activity
-                        recordActivity('Sent an image in chat');
                     })
                     .catch(error => {
                         console.error('Error sending image:', error);
@@ -1722,9 +1767,6 @@
                     .then(() => {
                         fileUpload.value = '';
                         fileUploadModal.classList.add('hidden');
-                        
-                        // Record activity
-                        recordActivity('Sent a file in chat');
                     })
                     .catch(error => {
                         console.error('Error sending file:', error);
@@ -1746,9 +1788,6 @@
             navigator.clipboard.writeText(roomLink)
                 .then(() => {
                     showToast('Room link copied to clipboard!');
-                    
-                    // Record activity
-                    recordActivity('Copied room link to clipboard');
                 })
                 .catch(err => {
                     console.error('Could not copy text: ', err);
@@ -1787,6 +1826,18 @@
                         });
                 })
                 .then(() => {
+                    // Then delete all typing indicators
+                    return db.collection('rooms').doc(currentRoomId)
+                        .collection('typing').get()
+                        .then(snapshot => {
+                            const batch = db.batch();
+                            snapshot.forEach(doc => {
+                                batch.delete(doc.ref);
+                            });
+                            return batch.commit();
+                        });
+                })
+                .then(() => {
                     // Then delete the room itself
                     return db.collection('rooms').doc(currentRoomId).delete();
                 })
@@ -1799,9 +1850,7 @@
                     roomUsersCount.textContent = '0 users';
                     messageInput.disabled = true;
                     deleteRoomBtn.classList.add('hidden');
-                    
-                    // Record activity
-                    recordActivity('Deleted a chat room');
+                    typingIndicator.classList.add('hidden');
                     
                     showToast('Room deleted successfully');
                 })
@@ -1869,88 +1918,55 @@
             userPresenceRef.onDisconnect().delete();
         }
         
-        // Load activity history
-        function loadActivityHistory() {
-            // Load user activities
-            db.collection('users').doc(currentUser.uid)
-                .collection('activity')
-                .orderBy('timestamp', 'desc')
-                .limit(50)
-                .get()
-                .then(snapshot => {
-                    activityList.innerHTML = '';
-                    
-                    if (snapshot.empty) {
-                        activityList.innerHTML = '<div class="activity-item">No activity yet</div>';
-                        return;
-                    }
-                    
+        // Track typing indicators in the current room
+        function trackTypingIndicators(roomId) {
+            // Unsubscribe from previous listener if it exists
+            if (typingUnsubscribe) typingUnsubscribe();
+            
+            const roomRef = db.collection('rooms').doc(roomId);
+            
+            typingUnsubscribe = roomRef.collection('typing')
+                .onSnapshot(snapshot => {
+                    const typingUsers = [];
                     snapshot.forEach(doc => {
-                        const activity = doc.data();
-                        const activityItem = document.createElement('div');
-                        activityItem.className = 'activity-item';
-                        activityItem.innerHTML = `
-                            <div>${activity.action}</div>
-                            <div class="activity-time">${formatTime(activity.timestamp?.toDate())}</div>
-                        `;
-                        activityList.appendChild(activityItem);
+                        if (doc.id !== currentUser.uid) {
+                            typingUsers.push(doc.id);
+                        }
                     });
                     
-                    // Load room activities with URLs
-                    return db.collection('rooms')
-                        .where('members', 'array-contains', currentUser.uid)
-                        .orderBy('lastUpdated', 'desc')
-                        .limit(10)
-                        .get();
-                })
-                .then(roomSnapshot => {
-                    if (!roomSnapshot.empty) {
-                        const roomActivityHeader = document.createElement('div');
-                        roomActivityHeader.className = 'activity-item';
-                        roomActivityHeader.innerHTML = '<strong>Your Chat Rooms</strong>';
-                        activityList.appendChild(roomActivityHeader);
-                        
-                        roomSnapshot.forEach(doc => {
-                            const room = doc.data();
-                            const roomUrl = `${window.location.origin}${window.location.pathname}?room=${doc.id}`;
-                            const activityItem = document.createElement('div');
-                            activityItem.className = 'activity-item';
-                            activityItem.innerHTML = `
-                                <div>Room: ${room.name}</div>
-                                <div class="room-url">${roomUrl}</div>
-                                <div class="activity-time">Last active: ${formatTime(room.lastUpdated?.toDate())}</div>
-                            `;
-                            activityList.appendChild(activityItem);
+                    if (typingUsers.length > 0) {
+                        const names = typingUsers.map(uid => {
+                            return roomUsers[uid]?.name || 'Someone';
                         });
+                        typingIndicator.textContent = `${names.join(', ')} ${names.length > 1 ? 'are' : 'is'} typing...`;
+                        typingIndicator.classList.remove('hidden');
+                    } else {
+                        typingIndicator.classList.add('hidden');
                     }
-                })
-                .catch(error => {
-                    console.error('Error loading activity:', error);
-                    activityList.innerHTML = '<div class="activity-item">Failed to load activity</div>';
                 });
         }
         
-        // Record user activity
-        function recordActivity(action) {
-            if (!currentUser) return;
+        // Update typing status
+        function updateTypingStatus(isTyping) {
+            if (!currentRoomId) return;
             
-            db.collection('users').doc(currentUser.uid)
-                .collection('activity')
-                .add({
-                    action: action,
+            const typingRef = db.collection('rooms').doc(currentRoomId)
+                .collection('typing').doc(currentUser.uid);
+            
+            if (isTyping) {
+                typingRef.set({
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                })
-                .catch(error => {
-                    console.error('Error recording activity:', error);
                 });
+            } else {
+                typingRef.delete();
+            }
         }
         
         // Format time
         function formatTime(date) {
             if (!date) return '';
             
-            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
-                   ' • ' + date.toLocaleDateString();
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         }
         
         // Format file size
