@@ -466,6 +466,43 @@
             100% { transform: rotate(360deg); }
         }
         
+        /* Modal styles */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: var(--sidebar-bg);
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+        
         /* Responsive */
         @media (max-width: 768px) {
             .chat-container {
@@ -671,11 +708,11 @@
     <script>
         // Firebase configuration - Replace with your actual config
         const firebaseConfig = {
-                apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
+            apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
             authDomain: "friends-195c7.firebaseapp.com",
             databaseURL: "https://friends-195c7-default-rtdb.firebaseio.com",
             projectId: "friends-195c7",
-            storageBucket: "friends-195c7.firebasestorage.app",
+            storageBucket: "friends-195c7.appspot.com",
             messagingSenderId: "487210823099",
             appId: "1:487210823099:web:30fb0fb91cd484486e289e",
             measurementId: "G-PSLN4J6DGL"
@@ -758,6 +795,12 @@
         const closeImageModalBtn = document.getElementById('close-image-modal');
         const closeFileModalBtn = document.getElementById('close-file-modal');
         const closeReactionModalBtn = document.getElementById('close-reaction-modal');
+        const uploadImageBtn = document.getElementById('upload-image-btn');
+        const uploadFileBtn = document.getElementById('upload-file-btn');
+        const imageUpload = document.getElementById('image-upload');
+        const fileUpload = document.getElementById('file-upload');
+        const imageUploadError = document.getElementById('image-upload-error');
+        const fileUploadError = document.getElementById('file-upload-error');
         
         // Loading Spinner
         const loadingSpinner = document.getElementById('loading-spinner');
@@ -877,6 +920,10 @@
             closeReactionModalBtn.addEventListener('click', () => {
                 reactionModal.classList.add('hidden');
             });
+            
+            // Upload buttons
+            uploadImageBtn.addEventListener('click', uploadImage);
+            uploadFileBtn.addEventListener('click', uploadFile);
             
             // Reaction emoji buttons
             document.querySelectorAll('.reaction-emoji').forEach(btn => {
