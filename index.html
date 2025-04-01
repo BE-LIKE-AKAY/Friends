@@ -9,6 +9,7 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -647,15 +648,12 @@
     <script>
         // Firebase configuration - Replace with your actual config
         const firebaseConfig = {
-            const firebaseConfig = {
-            apiKey: "AIzaSyCSymXsTvN448OuikZ7K_WJtRL3uRYULU4",
-  authDomain: "akay-fcfec.firebaseapp.com",
-  databaseURL: "https://akay-fcfec-default-rtdb.firebaseio.com",
-  projectId: "akay-fcfec",
-  storageBucket: "akay-fcfec.appspot.com",
-  messagingSenderId: "68464349991",
-  appId: "1:68464349991:web:c0ad4f759fe2d4f710cf02",
-  measurementId: "G-Y12D7E2VB8"
+             apiKey: "AIzaSyDz6vOQj5l1Jj1Jj1Jj1Jj1Jj1Jj1Jj1Jj",
+            authDomain: "your-project-id.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project-id.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890abcdef"
         };
         
         // Initialize Firebase
@@ -663,6 +661,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
+        const realtimeDb = firebase.database();
         
         // DOM Elements
         const authContainer = document.getElementById('auth-container');
@@ -761,21 +760,25 @@
             showSignupBtn.addEventListener('click', () => {
                 loginForm.classList.add('hidden');
                 signupForm.classList.remove('hidden');
+                clearAuthErrors();
             });
             
             showLoginBtn.addEventListener('click', () => {
                 signupForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
+                clearAuthErrors();
             });
             
             showForgotPasswordBtn.addEventListener('click', () => {
                 loginForm.classList.add('hidden');
                 forgotPasswordForm.classList.remove('hidden');
+                clearAuthErrors();
             });
             
             showLoginFromForgotBtn.addEventListener('click', () => {
                 forgotPasswordForm.classList.add('hidden');
                 loginForm.classList.remove('hidden');
+                clearAuthErrors();
             });
             
             // Auth buttons
@@ -808,10 +811,14 @@
             
             closeImageModalBtn.addEventListener('click', () => {
                 imageUploadModal.classList.add('hidden');
+                imageUpload.value = '';
+                imageUploadError.textContent = '';
             });
             
             closeFileModalBtn.addEventListener('click', () => {
                 fileUploadModal.classList.add('hidden');
+                fileUpload.value = '';
+                fileUploadError.textContent = '';
             });
             
             uploadImageBtn.addEventListener('click', uploadImage);
@@ -826,6 +833,14 @@
             });
         }
         
+        // Clear all auth error messages
+        function clearAuthErrors() {
+            loginError.textContent = '';
+            signupError.textContent = '';
+            forgotError.textContent = '';
+            forgotSuccess.textContent = '';
+        }
+        
         // Check authentication state
         function checkAuthState() {
             auth.onAuthStateChanged(user => {
@@ -837,11 +852,16 @@
                     chatContainer.classList.remove('hidden');
                     loadRooms();
                     trackUserPresence();
+                    checkUrlForRoom();
                 } else {
                     // User is signed out
                     currentUser = null;
                     authContainer.classList.remove('hidden');
                     chatContainer.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                    signupForm.classList.add('hidden');
+                    forgotPasswordForm.classList.add('hidden');
+                    clearAuthErrors();
                     
                     // Clean up any existing subscriptions
                     if (roomsUnsubscribe) roomsUnsubscribe();
@@ -853,14 +873,15 @@
         
         // Set up user profile
         function setupUserProfile(user) {
-            userName.textContent = user.displayName || user.email.split('@')[0];
+            const displayName = user.displayName || user.email.split('@')[0];
+            userName.textContent = displayName;
             userEmail.textContent = user.email;
-            userAvatar.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase();
+            userAvatar.textContent = displayName.charAt(0).toUpperCase();
             
             // Update user document in Firestore
             const userRef = db.collection('users').doc(user.uid);
             userRef.set({
-                name: user.displayName || user.email.split('@')[0],
+                name: displayName,
                 email: user.email,
                 lastSeen: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true });
@@ -877,10 +898,11 @@
             }
             
             showLoading(true);
+            loginError.textContent = '';
             
             auth.signInWithEmailAndPassword(email, password)
-                .then(() => {
-                    loginError.textContent = '';
+                .then((userCredential) => {
+                    // Clear form
                     loginEmail.value = '';
                     loginPassword.value = '';
                 })
@@ -915,6 +937,7 @@
             }
             
             showLoading(true);
+            signupError.textContent = '';
             
             auth.createUserWithEmailAndPassword(email, password)
                 .then((userCredential) => {
@@ -924,7 +947,7 @@
                     });
                 })
                 .then(() => {
-                    signupError.textContent = '';
+                    // Clear form
                     signupName.value = '';
                     signupEmail.value = '';
                     signupPassword.value = '';
@@ -952,16 +975,16 @@
             }
             
             showLoading(true);
+            forgotError.textContent = '';
+            forgotSuccess.textContent = '';
             
             auth.sendPasswordResetEmail(email)
                 .then(() => {
-                    forgotError.textContent = '';
                     forgotSuccess.textContent = 'Password reset email sent. Please check your inbox.';
                     forgotEmail.value = '';
                 })
                 .catch(error => {
                     forgotError.textContent = getAuthErrorMessage(error);
-                    forgotSuccess.textContent = '';
                 })
                 .finally(() => {
                     showLoading(false);
@@ -1007,7 +1030,7 @@
                 case 'auth/too-many-requests':
                     return 'Too many attempts. Try again later.';
                 default:
-                    return 'An error occurred. Please try again.';
+                    return error.message || 'An error occurred. Please try again.';
             }
         }
         
@@ -1022,6 +1045,10 @@
                 .onSnapshot(snapshot => {
                     roomList.innerHTML = '';
                     
+                    if (snapshot.empty) {
+                        roomList.innerHTML = '<li class="room-item" style="justify-content: center;">No rooms yet</li>';
+                    }
+                    
                     snapshot.forEach(doc => {
                         const room = doc.data();
                         const roomItem = document.createElement('li');
@@ -1029,7 +1056,7 @@
                         roomItem.setAttribute('data-room-id', doc.id);
                         roomItem.innerHTML = `
                             <span>${room.name}</span>
-                            <span class="room-users-count">${room.members.length}</span>
+                            <span class="room-users-count">${room.members ? room.members.length : 1}</span>
                         `;
                         
                         if (doc.id === currentRoomId) {
@@ -1072,6 +1099,9 @@
             .then(docRef => {
                 newRoomName.value = '';
                 joinRoom(docRef.id, roomName);
+                
+                // Record activity
+                recordActivity(`Created room "${roomName}"`);
             })
             .catch(error => {
                 console.error('Error creating room:', error);
@@ -1096,8 +1126,10 @@
             // Highlight selected room
             document.querySelectorAll('.room-item').forEach(item => {
                 item.classList.remove('active');
+                if (item.getAttribute('data-room-id') === roomId) {
+                    item.classList.add('active');
+                }
             });
-            document.querySelector(`.room-item[data-room-id="${roomId}"]`).classList.add('active');
             
             // Load messages
             loadMessages(roomId);
@@ -1125,12 +1157,17 @@
         
         // Load messages for a room
         function loadMessages(roomId) {
-            chatMessages.innerHTML = '';
+            chatMessages.innerHTML = '<div style="text-align: center; padding: 20px;">Loading messages...</div>';
             
             messagesUnsubscribe = db.collection('rooms').doc(roomId)
                 .collection('messages')
                 .orderBy('timestamp', 'asc')
                 .onSnapshot(snapshot => {
+                    // Clear loading message if it exists
+                    if (chatMessages.children.length === 1 && chatMessages.children[0].textContent === 'Loading messages...') {
+                        chatMessages.innerHTML = '';
+                    }
+                    
                     snapshot.docChanges().forEach(change => {
                         if (change.type === 'added') {
                             displayMessage(change.doc.data());
@@ -1138,9 +1175,12 @@
                     });
                     
                     // Scroll to bottom
-                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    setTimeout(() => {
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 100);
                 }, error => {
                     console.error('Error loading messages:', error);
+                    chatMessages.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--danger-color);">Failed to load messages</div>';
                 });
         }
         
@@ -1265,6 +1305,9 @@
                     .then(() => {
                         imageUpload.value = '';
                         imageUploadModal.classList.add('hidden');
+                        
+                        // Record activity
+                        recordActivity('Sent an image in chat');
                     })
                     .catch(error => {
                         console.error('Error sending image:', error);
@@ -1330,6 +1373,9 @@
                     .then(() => {
                         fileUpload.value = '';
                         fileUploadModal.classList.add('hidden');
+                        
+                        // Record activity
+                        recordActivity('Sent a file in chat');
                     })
                     .catch(error => {
                         console.error('Error sending file:', error);
@@ -1351,6 +1397,9 @@
             navigator.clipboard.writeText(roomLink)
                 .then(() => {
                     alert('Room link copied to clipboard!');
+                    
+                    // Record activity
+                    recordActivity('Copied room link to clipboard');
                 })
                 .catch(err => {
                     console.error('Could not copy text: ', err);
@@ -1415,21 +1464,11 @@
                 lastChanged: firebase.firestore.FieldValue.serverTimestamp(),
             };
             
-            // Set up realtime listener for user's own status
-            db.collection('status').doc(currentUser.uid)
-                .onSnapshot((doc) => {
-                    if (doc.exists) {
-                        const data = doc.data();
-                        console.log('User status:', data.state);
-                    }
-                });
-            
             // Set user to online when they connect
-            db.collection('status').doc(currentUser.uid)
-                .set(isOnlineForFirestore);
+            userStatusRef.set(isOnlineForFirestore);
             
             // Create a reference to the special '.info/connected' path in RTDB
-            const connectedRef = firebase.database().ref('.info/connected');
+            const connectedRef = realtimeDb.ref('.info/connected');
             connectedRef.on('value', (snapshot) => {
                 if (snapshot.val() === false) {
                     return;
@@ -1440,8 +1479,7 @@
                     .set(isOfflineForFirestore)
                     .then(() => {
                         // When we reconnect, set user back to online
-                        db.collection('status').doc(currentUser.uid)
-                            .set(isOnlineForFirestore);
+                        userStatusRef.set(isOnlineForFirestore);
                     });
             });
         }
@@ -1465,7 +1503,8 @@
                     });
                     
                     // Update UI with user count
-                    roomUsersCount.textContent = `${Object.keys(roomUsers).length + 1} users`;
+                    const userCount = Object.keys(roomUsers).length + 1; // +1 for current user
+                    roomUsersCount.textContent = `${userCount} user${userCount !== 1 ? 's' : ''}`;
                 });
             
             // Set up our presence in the room
@@ -1611,12 +1650,6 @@
         
         // Initialize the app when DOM is loaded
         document.addEventListener('DOMContentLoaded', init);
-        
-        // Check for room ID in URL when auth state changes
-        auth.onAuthStateChanged(() => {
-            checkUrlForRoom();
-        });
     </script>
 </body>
 </html>
-        
