@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FireChat - Real-time Chat System</title>
+    <title>FireChat - Complete Chat System</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -437,6 +436,18 @@
             font-weight: 500;
         }
         
+        .profile-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .profile-tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
         .tab-content {
             display: none;
         }
@@ -619,38 +630,17 @@
                         <img id="avatar-image" class="hidden" src="" alt="Profile picture">
                     </div>
                     <div class="user-info">
-                        <h3 id="user-name" class="profile-toggle">User</h3>
+                        <h3 id="user-name">User</h3>
                         <p id="user-email">user@example.com</p>
                         <button class="logout-btn" id="logout-btn">Logout</button>
                     </div>
-                </div>
-                
-                <!-- Profile Section -->
-                <div id="profile-section" class="profile-section">
-                    <h3>Edit Profile</h3>
-                    <form class="profile-form" id="profile-form">
-                        <div class="form-group">
-                            <label for="profile-name">Name</label>
-                            <input type="text" id="profile-name" placeholder="Enter your name">
-                        </div>
-                        <div class="form-group">
-                            <label for="profile-email">Email</label>
-                            <input type="email" id="profile-email" disabled>
-                        </div>
-                        <div class="form-group">
-                            <label for="profile-photo">Profile Photo</label>
-                            <input type="file" id="profile-photo" accept="image/*">
-                        </div>
-                        <button type="button" id="save-profile-btn">Save Changes</button>
-                        <div id="profile-error" class="error-message"></div>
-                        <div id="profile-success" style="color: var(--secondary-color); margin-top: 10px;"></div>
-                    </form>
                 </div>
                 
                 <!-- Tabs -->
                 <div class="tabs">
                     <div class="tab active" data-tab="rooms">Chat Rooms</div>
                     <div class="tab" data-tab="activity">Activity</div>
+                    <div class="profile-tab" data-tab="profile">Profile</div>
                 </div>
                 
                 <!-- Rooms Tab -->
@@ -668,6 +658,22 @@
                 <div id="activity-tab" class="tab-content">
                     <div id="activity-list">
                         <!-- Activity items will be added here dynamically -->
+                    </div>
+                </div>
+                
+                <!-- Profile Tab -->
+                <div id="profile-tab" class="tab-content">
+                    <div class="profile-form">
+                        <div class="form-group">
+                            <label for="edit-name">Display Name</label>
+                            <input type="text" id="edit-name" placeholder="Your name">
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-avatar">Profile Picture</label>
+                            <input type="file" id="edit-avatar" accept="image/*">
+                        </div>
+                        <button id="save-profile">Save Changes</button>
+                        <div id="profile-message" class="error-message"></div>
                     </div>
                 </div>
             </div>
@@ -748,7 +754,6 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
-        const realtimeDb = firebase.database();
         
         // DOM Elements
         const authContainer = document.getElementById('auth-container');
@@ -792,14 +797,11 @@
         const avatarImage = document.getElementById('avatar-image');
         
         // Profile Elements
-        const profileSection = document.getElementById('profile-section');
-        const profileName = document.getElementById('profile-name');
-        const profileEmail = document.getElementById('profile-email');
-        const profilePhoto = document.getElementById('profile-photo');
-        const saveProfileBtn = document.getElementById('save-profile-btn');
-        const profileError = document.getElementById('profile-error');
-        const profileSuccess = document.getElementById('profile-success');
-        const profileToggle = document.querySelector('.profile-toggle');
+        const editName = document.getElementById('edit-name');
+        const editAvatar = document.getElementById('edit-avatar');
+        const saveProfileBtn = document.getElementById('save-profile');
+        const profileMessage = document.getElementById('profile-message');
+        const profileTab = document.querySelector('.profile-tab');
         
         // Room Elements
         const newRoomName = document.getElementById('new-room-name');
@@ -819,6 +821,7 @@
         
         // Tabs
         const tabs = document.querySelectorAll('.tab');
+        const profileTabs = document.querySelectorAll('.profile-tab');
         const tabContents = document.querySelectorAll('.tab-content');
         
         // Activity
@@ -888,8 +891,25 @@
             logoutBtn.addEventListener('click', logoutUser);
             
             // Profile buttons
-            profileToggle.addEventListener('click', toggleProfileSection);
-            saveProfileBtn.addEventListener('click', saveProfile);
+            saveProfileBtn.addEventListener('click', updateProfile);
+            
+            // Tab switching
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
+            });
+            
+            profileTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    switchTab(tabId);
+                    if (tabId === 'profile') {
+                        loadProfileData();
+                    }
+                });
+            });
             
             // Chat buttons
             createRoomBtn.addEventListener('click', createRoom);
@@ -927,14 +947,6 @@
             
             uploadImageBtn.addEventListener('click', uploadImage);
             uploadFileBtn.addEventListener('click', uploadFile);
-            
-            // Tabs
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabId = tab.getAttribute('data-tab');
-                    switchTab(tabId);
-                });
-            });
         }
         
         // Clear all auth error messages
@@ -983,10 +995,6 @@
             userEmail.textContent = user.email;
             avatarText.textContent = displayName.charAt(0).toUpperCase();
             
-            // Set profile form values
-            profileName.value = displayName;
-            profileEmail.value = user.email;
-            
             // Update user document in Firestore
             const userRef = db.collection('users').doc(user.uid);
             userRef.set({
@@ -1014,6 +1022,14 @@
             });
         }
         
+        // Load profile data for editing
+        function loadProfileData() {
+            if (!currentUser) return;
+            
+            editName.value = currentUser.displayName || '';
+            profileMessage.textContent = '';
+        }
+        
         // Update avatar display
         function updateAvatar(photoURL) {
             if (photoURL) {
@@ -1026,94 +1042,106 @@
             }
         }
         
-        // Toggle profile section visibility
-        function toggleProfileSection() {
-            profileSection.classList.toggle('active');
-        }
-        
-        // Save profile changes
-        function saveProfile() {
-            const newName = profileName.value.trim();
-            const photoFile = profilePhoto.files[0];
+        // Update profile
+        function updateProfile() {
+            const newName = editName.value.trim();
+            const file = editAvatar.files[0];
             
             if (!newName) {
-                profileError.textContent = 'Please enter a name';
+                profileMessage.textContent = 'Please enter a name';
                 return;
             }
             
             showLoading(true);
-            profileError.textContent = '';
-            profileSuccess.textContent = '';
+            profileMessage.textContent = '';
             
-            // First update the name
-            const updates = {
-                name: newName,
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-            };
+            let updatePromise;
             
-            // If there's a photo to upload
-            const uploadPhotoPromise = photoFile ? uploadProfilePhoto(photoFile) : Promise.resolve();
-            
-            uploadPhotoPromise
-                .then(photoURL => {
-                    if (photoURL) {
-                        updates.photoURL = photoURL;
-                        userProfilePhotoUrl = photoURL;
-                    }
-                    
-                    // Update user profile in Firebase Auth
-                    return currentUser.updateProfile({
-                        displayName: newName,
-                        photoURL: photoURL || currentUser.photoURL
+            if (file) {
+                // Upload new avatar
+                const storageRef = storage.ref(`profile_pictures/${currentUser.uid}`);
+                updatePromise = storageRef.put(file)
+                    .then(snapshot => snapshot.ref.getDownloadURL())
+                    .then(url => {
+                        return Promise.all([
+                            currentUser.updateProfile({
+                                displayName: newName,
+                                photoURL: url
+                            }),
+                            db.collection('users').doc(currentUser.uid).update({
+                                name: newName,
+                                photoURL: url,
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            })
+                        ]);
                     });
-                })
+            } else {
+                // Just update name
+                updatePromise = Promise.all([
+                    currentUser.updateProfile({
+                        displayName: newName
+                    }),
+                    db.collection('users').doc(currentUser.uid).update({
+                        name: newName,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    })
+                ]);
+            }
+            
+            updatePromise
                 .then(() => {
-                    // Update user document in Firestore
-                    return db.collection('users').doc(currentUser.uid).update(updates);
-                })
-                .then(() => {
+                    profileMessage.style.color = 'var(--secondary-color)';
+                    profileMessage.textContent = 'Profile updated successfully!';
                     // Update UI
                     userName.textContent = newName;
-                    avatarText.textContent = newName.charAt(0).toUpperCase();
-                    
-                    if (userProfilePhotoUrl) {
-                        updateAvatar(userProfilePhotoUrl);
+                    if (file) {
+                        // Update avatar display
+                        loadUserData();
                     }
                     
-                    profileSuccess.textContent = 'Profile updated successfully!';
-                    profilePhoto.value = '';
+                    // Clear file input
+                    editAvatar.value = '';
                     
                     // Hide success message after 3 seconds
                     setTimeout(() => {
-                        profileSuccess.textContent = '';
+                        profileMessage.textContent = '';
                     }, 3000);
                 })
                 .catch(error => {
                     console.error('Error updating profile:', error);
-                    profileError.textContent = getAuthErrorMessage(error);
+                    profileMessage.textContent = getAuthErrorMessage(error);
                 })
                 .finally(() => {
                     showLoading(false);
                 });
         }
         
-        // Upload profile photo
-        function uploadProfilePhoto(file) {
-            return new Promise((resolve, reject) => {
-                const storageRef = storage.ref(`profile_photos/${currentUser.uid}`);
-                const uploadTask = storageRef.put(file);
-                
-                uploadTask.on('state_changed', 
-                    null, 
-                    error => {
-                        reject(error);
-                    }, 
-                    () => {
-                        uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
-                            resolve(downloadURL);
-                        });
-                    }
-                );
+        // Switch between tabs
+        function switchTab(tabId) {
+            // Handle regular tabs
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            // Handle profile tab
+            profileTabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            tabContents.forEach(content => {
+                if (content.id === `${tabId}-tab`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
             });
         }
         
@@ -1235,7 +1263,6 @@
                     currentRoomName.textContent = 'Select a chat room';
                     roomUsersCount.textContent = '0 users';
                     messageInput.disabled = true;
-                    profileSection.classList.remove('active');
                 })
                 .catch(error => {
                     console.error('Logout error:', error);
@@ -1308,7 +1335,7 @@
                 });
         }
         
-        // Create a new room
+        // Create a new room with unique URL
         function createRoom() {
             const roomName = newRoomName.value.trim();
             
@@ -1319,17 +1346,33 @@
             
             showLoading(true);
             
-            // Create room with current user as the first member
-            db.collection('rooms').add({
+            // Generate a unique room ID
+            const roomId = db.collection('rooms').doc().id;
+            
+            db.collection('rooms').doc(roomId).set({
                 name: roomName,
                 createdBy: currentUser.uid,
                 members: [currentUser.uid],
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                roomId: roomId
             })
-            .then(docRef => {
+            .then(() => {
                 newRoomName.value = '';
-                joinRoom(docRef.id, roomName);
+                
+                // Generate shareable URL
+                const roomUrl = `${window.location.origin}${window.location.pathname}?room=${roomId}`;
+                
+                // Copy to clipboard
+                navigator.clipboard.writeText(roomUrl)
+                    .then(() => {
+                        alert(`Room created! The invite link has been copied to your clipboard: ${roomUrl}`);
+                    })
+                    .catch(() => {
+                        alert(`Room created! Share this link: ${roomUrl}`);
+                    });
+                
+                joinRoom(roomId, roomName);
                 
                 // Record activity
                 recordActivity(`Created room "${roomName}"`);
@@ -1347,11 +1390,11 @@
         function getFirestoreErrorMessage(error) {
             switch (error.code) {
                 case 'permission-denied':
-                    return 'You dont have permission to create rooms. Check your Firestore rules.';
+                    return 'You dont have permission to perform this action.';
                 case 'unavailable':
-                    return 'Firestore service is unavailable. Check your internet connection.';
+                    return 'Service is unavailable. Check your internet connection.';
                 default:
-                    return 'Failed to create room. Please try again.';
+                    return 'An error occurred. Please try again.';
             }
         }
         
@@ -1701,7 +1744,6 @@
         function trackUserPresence() {
             const userStatusRef = db.collection('status').doc(currentUser.uid);
             
-            // Firestore uses a local cache, so we need to handle online/offline states
             const isOfflineForFirestore = {
                 state: 'offline',
                 lastChanged: firebase.firestore.FieldValue.serverTimestamp(),
@@ -1714,22 +1756,6 @@
             
             // Set user to online when they connect
             userStatusRef.set(isOnlineForFirestore);
-            
-            // Create a reference to the special '.info/connected' path in RTDB
-            const connectedRef = realtimeDb.ref('.info/connected');
-            connectedRef.on('value', (snapshot) => {
-                if (snapshot.val() === false) {
-                    return;
-                }
-                
-                // When we disconnect, set user to offline
-                connectedRef.onDisconnect()
-                    .set(isOfflineForFirestore)
-                    .then(() => {
-                        // When we reconnect, set user back to online
-                        userStatusRef.set(isOnlineForFirestore);
-                    });
-            });
         }
         
         // Track presence in the current room
@@ -1814,25 +1840,6 @@
                 .catch(error => {
                     console.error('Error recording activity:', error);
                 });
-        }
-        
-        // Switch between tabs
-        function switchTab(tabId) {
-            tabs.forEach(tab => {
-                if (tab.getAttribute('data-tab') === tabId) {
-                    tab.classList.add('active');
-                } else {
-                    tab.classList.remove('active');
-                }
-            });
-            
-            tabContents.forEach(content => {
-                if (content.id === `${tabId}-tab`) {
-                    content.classList.add('active');
-                } else {
-                    content.classList.remove('active');
-                }
-            });
         }
         
         // Format time
