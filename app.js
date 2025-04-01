@@ -1,12 +1,13 @@
 // Firebase configuration - REPLACE WITH YOUR CONFIG
 const firebaseConfig = {
-    apiKey: "AIzaSyABC123XYZ456DEF789GHI",
-    authDomain: "your-project-id.firebaseapp.com",
-    databaseURL: "https://your-project-id.firebaseio.com",
-    projectId: "your-project-id",
-    storageBucket: "your-project-id.appspot.com",
-    messagingSenderId: "123456789012",
-    appId: "1:123456789012:web:abc123def456ghi789jkl"
+    apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
+            authDomain: "friends-195c7.firebaseapp.com",
+            databaseURL: "https://friends-195c7-default-rtdb.firebaseio.com",
+            projectId: "friends-195c7",
+            storageBucket: "friends-195c7.firebasestorage.app",
+            messagingSenderId: "487210823099",
+            appId: "1:487210823099:web:30fb0fb91cd484486e289e",
+            measurementId: "G-PSLN4J6DGL"
 };
 
 // Initialize Firebase
