@@ -3,71 +3,651 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat System with Firestore</title>
+    <title>FireChat - Real-time Chat System</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-storage.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
-        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-        .auth-section, .chat-section, .history-section { display: none; }
-        .active { display: block; }
-        input, button { margin: 5px 0; padding: 8px; width: 100%; box-sizing: border-box; }
-        .chat-room { border: 1px solid #ddd; padding: 10px; margin-top: 10px; max-height: 400px; overflow-y: auto; }
-        .message { padding: 5px; border-bottom: 1px solid #eee; }
-        .message img { max-width: 100px; }
-        .tab { cursor: pointer; padding: 10px; background: #ddd; display: inline-block; margin-right: 5px; }
-        .tab.active { background: #bbb; }
-        #userCount { font-weight: bold; }
+        :root {
+            --primary-color: #4285f4;
+            --secondary-color: #34a853;
+            --danger-color: #ea4335;
+            --warning-color: #fbbc05;
+            --dark-color: #202124;
+            --light-color: #f8f9fa;
+            --gray-color: #dadce0;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        /* Auth Forms */
+        .auth-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .auth-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: var(--primary-color);
+        }
+        
+        .auth-form .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .auth-form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .auth-form input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--gray-color);
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        
+        .auth-form button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .auth-form button:hover {
+            background-color: #3367d6;
+        }
+        
+        .auth-toggle {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .auth-toggle a {
+            color: var(--primary-color);
+            text-decoration: none;
+            cursor: pointer;
+        }
+        
+        .auth-toggle a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        /* Chat Layout */
+        .chat-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            height: calc(100vh - 40px);
+        }
+        
+        .sidebar {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        
+        .chat-header {
+            padding: 15px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: #f5f5f5;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+        
+        .message.sent {
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .message.received {
+            margin-right: auto;
+        }
+        
+        .message-content {
+            display: inline-block;
+            padding: 10px 15px;
+            border-radius: 18px;
+            background-color: white;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            word-break: break-word;
+        }
+        
+        .message.sent .message-content {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .message-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .message-image {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 5px;
+            cursor: pointer;
+        }
+        
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: white;
+            border-top: 1px solid var(--gray-color);
+        }
+        
+        .chat-input input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--gray-color);
+            border-radius: 20px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        
+        .chat-input button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+        }
+        
+        .chat-input button:hover {
+            background-color: #3367d6;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-left: 10px;
+        }
+        
+        .action-buttons button {
+            background-color: transparent;
+            border: none;
+            color: var(--primary-color);
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        /* Room List */
+        .room-list {
+            list-style: none;
+        }
+        
+        .room-item {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-item:hover {
+            background-color: var(--light-color);
+        }
+        
+        .room-item.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .room-users-count {
+            background-color: var(--secondary-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .create-room {
+            margin-top: 20px;
+        }
+        
+        .create-room input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--gray-color);
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        
+        .create-room button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .create-room button:hover {
+            background-color: #2d9249;
+        }
+        
+        /* User Profile */
+        .user-profile {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--gray-color);
+        }
+        
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            margin-right: 15px;
+        }
+        
+        .user-info h3 {
+            margin-bottom: 5px;
+        }
+        
+        .user-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .logout-btn {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 15px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .logout-btn:hover {
+            background-color: #d33426;
+        }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--gray-color);
+            margin-bottom: 15px;
+        }
+        
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab.active {
+            border-bottom: 2px solid var(--primary-color);
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* Activity History */
+        .activity-item {
+            padding: 10px;
+            border-bottom: 1px solid var(--gray-color);
+            font-size: 14px;
+        }
+        
+        .activity-time {
+            color: #666;
+            font-size: 12px;
+            margin-top: 3px;
+        }
+        
+        /* Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h2 {
+            color: var(--primary-color);
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .chat-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+            
+            .sidebar.active {
+                display: block;
+            }
+            
+            .mobile-menu-btn {
+                display: block;
+                background: none;
+                border: none;
+                font-size: 20px;
+                color: white;
+                cursor: pointer;
+            }
+        }
+        
+        /* Loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Authentication Section -->
-        <div id="authSection" class="auth-section active">
-            <h2>Login / Signup</h2>
-            <input type="email" id="email" placeholder="Email">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="signup()">Signup</button>
-            <button onclick="login()">Login</button>
-            <button onclick="showForgotPassword()">Forgot Password?</button>
-            <div id="forgotPassword" style="display: none;">
-                <input type="email" id="resetEmail" placeholder="Enter your email">
-                <button onclick="resetPassword()">Reset Password</button>
+    <!-- Authentication Container -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-card">
+            <h2 class="auth-title">Welcome to FireChat</h2>
+            
+            <!-- Login Form -->
+            <div id="login-form" class="auth-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Password</label>
+                    <input type="password" id="login-password" placeholder="Enter your password">
+                </div>
+                <button id="login-btn">Login</button>
+                <div class="auth-toggle">
+                    <span>Don't have an account? <a id="show-signup">Sign up</a></span><br>
+                    <a id="show-forgot-password">Forgot password?</a>
+                </div>
+                <div id="login-error" class="error-message"></div>
             </div>
-        </div>
-
-        <!-- Chat Section -->
-        <div id="chatSection" class="chat-section">
-            <h2>Chat Room</h2>
-            <button onclick="createChatRoom()">Create Chat Room</button>
-            <button onclick="logout()">Logout</button>
-            <div id="chatUrl"></div>
-            <div id="userCount">Users in room: 0</div>
-            <div id="chatRoom" class="chat-room"></div>
-            <input type="text" id="messageInput" placeholder="Type a message">
-            <input type="file" id="imageInput" accept="image/*">
-            <button onclick="sendMessage()">Send</button>
-            <button onclick="deleteChat()">Delete Chat</button>
-            <div>
-                <span class="tab active" onclick="showTab('chat')">Chat</span>
-                <span class="tab" onclick="showTab('history')">Activity History</span>
+            
+            <!-- Signup Form -->
+            <div id="signup-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="signup-name">Name</label>
+                    <input type="text" id="signup-name" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label for="signup-email">Email</label>
+                    <input type="email" id="signup-email" placeholder="Enter your email">
+                </div>
+                <div class="form-group">
+                    <label for="signup-password">Password</label>
+                    <input type="password" id="signup-password" placeholder="Create a password">
+                </div>
+                <div class="form-group">
+                    <label for="signup-confirm-password">Confirm Password</label>
+                    <input type="password" id="signup-confirm-password" placeholder="Confirm your password">
+                </div>
+                <button id="signup-btn">Sign Up</button>
+                <div class="auth-toggle">
+                    <span>Already have an account? <a id="show-login">Login</a></span>
+                </div>
+                <div id="signup-error" class="error-message"></div>
             </div>
-        </div>
-
-        <!-- History Section -->
-        <div id="historySection" class="history-section">
-            <h2>Activity History</h2>
-            <div id="historyLog"></div>
+            
+            <!-- Forgot Password Form -->
+            <div id="forgot-password-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label for="forgot-email">Email</label>
+                    <input type="email" id="forgot-email" placeholder="Enter your email">
+                </div>
+                <button id="reset-password-btn">Reset Password</button>
+                <div class="auth-toggle">
+                    <a id="show-login-from-forgot">Back to login</a>
+                </div>
+                <div id="forgot-error" class="error-message"></div>
+                <div id="forgot-success" style="color: var(--secondary-color); margin-top: 10px;"></div>
+            </div>
         </div>
     </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+    
+    <!-- Chat Container -->
+    <div id="chat-container" class="container hidden">
+        <div class="chat-container">
+            <!-- Sidebar -->
+            <div class="sidebar">
+                <!-- User Profile -->
+                <div class="user-profile">
+                    <div class="user-avatar" id="user-avatar">U</div>
+                    <div class="user-info">
+                        <h3 id="user-name">User</h3>
+                        <p id="user-email">user@example.com</p>
+                        <button class="logout-btn" id="logout-btn">Logout</button>
+                    </div>
+                </div>
+                
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" data-tab="rooms">Chat Rooms</div>
+                    <div class="tab" data-tab="activity">Activity</div>
+                </div>
+                
+                <!-- Rooms Tab -->
+                <div id="rooms-tab" class="tab-content active">
+                    <div class="create-room">
+                        <input type="text" id="new-room-name" placeholder="Enter room name">
+                        <button id="create-room-btn">Create Room</button>
+                    </div>
+                    <ul class="room-list" id="room-list">
+                        <!-- Rooms will be added here dynamically -->
+                    </ul>
+                </div>
+                
+                <!-- Activity Tab -->
+                <div id="activity-tab" class="tab-content">
+                    <div id="activity-list">
+                        <!-- Activity items will be added here dynamically -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Chat Area -->
+            <div class="chat-area">
+                <div class="chat-header">
+                    <h3 id="current-room-name">Select a chat room</h3>
+                    <div>
+                        <span id="room-users-count">0 users</span>
+                        <button id="copy-room-link" title="Copy room link"><i class="fas fa-link"></i></button>
+                        <button id="delete-room-btn" title="Delete room"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chat-messages">
+                    <!-- Messages will be added here dynamically -->
+                </div>
+                
+                <div class="chat-input">
+                    <input type="text" id="message-input" placeholder="Type your message..." disabled>
+                    <div class="action-buttons">
+                        <button id="attach-file-btn" title="Attach file"><i class="fas fa-paperclip"></i></button>
+                        <button id="send-image-btn" title="Send image"><i class="fas fa-image"></i></button>
+                    </div>
+                    <button id="send-message-btn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Image Upload Modal -->
+    <div id="image-upload-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Send Image</h2>
+                <button class="close-modal" id="close-image-modal">&times;</button>
+            </div>
+            <input type="file" id="image-upload" accept="image/*">
+            <button id="upload-image-btn" style="width: 100%; padding: 10px; margin-top: 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px;">Upload and Send</button>
+            <div id="image-upload-error" class="error-message"></div>
+        </div>
+    </div>
+    
+    <!-- File Upload Modal -->
+    <div id="file-upload-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Attach File</h2>
+                <button class="close-modal" id="close-file-modal">&times;</button>
+            </div>
+            <input type="file" id="file-upload">
+            <button id="upload-file-btn" style="width: 100%; padding: 10px; margin-top: 15px; background-color: var(--primary-color); color: white; border: none; border-radius: 4px;">Upload and Send</button>
+            <div id="file-upload-error" class="error-message"></div>
+        </div>
+    </div>
+    
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000;">
+        <div class="spinner"></div>
+    </div>
 
     <script>
-        // Firebase Configuration (Replace with your own)
+        // Firebase configuration - Replace with your actual config
         const firebaseConfig = {
+            const firebaseConfig = {
             apiKey: "AIzaSyCSymXsTvN448OuikZ7K_WJtRL3uRYULU4",
   authDomain: "akay-fcfec.firebaseapp.com",
   databaseURL: "https://akay-fcfec-default-rtdb.firebaseio.com",
@@ -77,199 +657,966 @@
   appId: "1:68464349991:web:c0ad4f759fe2d4f710cf02",
   measurementId: "G-Y12D7E2VB8"
         };
-
+        
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
-        let currentRoomId = null;
+        
+        // DOM Elements
+        const authContainer = document.getElementById('auth-container');
+        const chatContainer = document.getElementById('chat-container');
+        
+        // Auth Forms
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const forgotPasswordForm = document.getElementById('forgot-password-form');
+        
+        // Auth Buttons
+        const showSignupBtn = document.getElementById('show-signup');
+        const showLoginBtn = document.getElementById('show-login');
+        const showForgotPasswordBtn = document.getElementById('show-forgot-password');
+        const showLoginFromForgotBtn = document.getElementById('show-login-from-forgot');
+        
+        // Auth Inputs
+        const loginEmail = document.getElementById('login-email');
+        const loginPassword = document.getElementById('login-password');
+        const loginBtn = document.getElementById('login-btn');
+        const loginError = document.getElementById('login-error');
+        
+        const signupName = document.getElementById('signup-name');
+        const signupEmail = document.getElementById('signup-email');
+        const signupPassword = document.getElementById('signup-password');
+        const signupConfirmPassword = document.getElementById('signup-confirm-password');
+        const signupBtn = document.getElementById('signup-btn');
+        const signupError = document.getElementById('signup-error');
+        
+        const forgotEmail = document.getElementById('forgot-email');
+        const resetPasswordBtn = document.getElementById('reset-password-btn');
+        const forgotError = document.getElementById('forgot-error');
+        const forgotSuccess = document.getElementById('forgot-success');
+        
+        // Chat Elements
+        const logoutBtn = document.getElementById('logout-btn');
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        const userAvatar = document.getElementById('user-avatar');
+        
+        // Room Elements
+        const newRoomName = document.getElementById('new-room-name');
+        const createRoomBtn = document.getElementById('create-room-btn');
+        const roomList = document.getElementById('room-list');
+        const currentRoomName = document.getElementById('current-room-name');
+        const roomUsersCount = document.getElementById('room-users-count');
+        const copyRoomLinkBtn = document.getElementById('copy-room-link');
+        const deleteRoomBtn = document.getElementById('delete-room-btn');
+        
+        // Message Elements
+        const chatMessages = document.getElementById('chat-messages');
+        const messageInput = document.getElementById('message-input');
+        const sendMessageBtn = document.getElementById('send-message-btn');
+        const attachFileBtn = document.getElementById('attach-file-btn');
+        const sendImageBtn = document.getElementById('send-image-btn');
+        
+        // Tabs
+        const tabs = document.querySelectorAll('.tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        
+        // Activity
+        const activityList = document.getElementById('activity-list');
+        
+        // Modals
+        const imageUploadModal = document.getElementById('image-upload-modal');
+        const fileUploadModal = document.getElementById('file-upload-modal');
+        const closeImageModalBtn = document.getElementById('close-image-modal');
+        const closeFileModalBtn = document.getElementById('close-file-modal');
+        const imageUpload = document.getElementById('image-upload');
+        const fileUpload = document.getElementById('file-upload');
+        const uploadImageBtn = document.getElementById('upload-image-btn');
+        const uploadFileBtn = document.getElementById('upload-file-btn');
+        const imageUploadError = document.getElementById('image-upload-error');
+        const fileUploadError = document.getElementById('file-upload-error');
+        
+        // Loading Spinner
+        const loadingSpinner = document.getElementById('loading-spinner');
+        
+        // Global Variables
         let currentUser = null;
-
-        // Authentication Functions
-        function signup() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    currentUser = userCredential.user;
-                    showChatSection();
-                })
-                .catch(error => alert(error.message));
+        let currentRoomId = null;
+        let roomsUnsubscribe = null;
+        let messagesUnsubscribe = null;
+        let presenceUnsubscribe = null;
+        let roomUsers = {};
+        
+        // Initialize the app
+        function init() {
+            setupEventListeners();
+            checkAuthState();
         }
-
-        function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            auth.signInWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    currentUser = userCredential.user;
-                    showChatSection();
-                })
-                .catch(error => alert(error.message));
-        }
-
-        function logout() {
-            auth.signOut().then(() => {
-                currentUser = null;
-                currentRoomId = null;
-                showAuthSection();
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Auth form toggles
+            showSignupBtn.addEventListener('click', () => {
+                loginForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+            });
+            
+            showLoginBtn.addEventListener('click', () => {
+                signupForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            });
+            
+            showForgotPasswordBtn.addEventListener('click', () => {
+                loginForm.classList.add('hidden');
+                forgotPasswordForm.classList.remove('hidden');
+            });
+            
+            showLoginFromForgotBtn.addEventListener('click', () => {
+                forgotPasswordForm.classList.add('hidden');
+                loginForm.classList.remove('hidden');
+            });
+            
+            // Auth buttons
+            loginBtn.addEventListener('click', loginUser);
+            signupBtn.addEventListener('click', signupUser);
+            resetPasswordBtn.addEventListener('click', resetPassword);
+            logoutBtn.addEventListener('click', logoutUser);
+            
+            // Chat buttons
+            createRoomBtn.addEventListener('click', createRoom);
+            sendMessageBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Room actions
+            copyRoomLinkBtn.addEventListener('click', copyRoomLink);
+            deleteRoomBtn.addEventListener('click', deleteRoom);
+            
+            // File uploads
+            attachFileBtn.addEventListener('click', () => {
+                fileUploadModal.classList.remove('hidden');
+            });
+            
+            sendImageBtn.addEventListener('click', () => {
+                imageUploadModal.classList.remove('hidden');
+            });
+            
+            closeImageModalBtn.addEventListener('click', () => {
+                imageUploadModal.classList.add('hidden');
+            });
+            
+            closeFileModalBtn.addEventListener('click', () => {
+                fileUploadModal.classList.add('hidden');
+            });
+            
+            uploadImageBtn.addEventListener('click', uploadImage);
+            uploadFileBtn.addEventListener('click', uploadFile);
+            
+            // Tabs
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabId = tab.getAttribute('data-tab');
+                    switchTab(tabId);
+                });
             });
         }
-
-        function showForgotPassword() {
-            document.getElementById('forgotPassword').style.display = 'block';
+        
+        // Check authentication state
+        function checkAuthState() {
+            auth.onAuthStateChanged(user => {
+                if (user) {
+                    // User is signed in
+                    currentUser = user;
+                    setupUserProfile(user);
+                    authContainer.classList.add('hidden');
+                    chatContainer.classList.remove('hidden');
+                    loadRooms();
+                    trackUserPresence();
+                } else {
+                    // User is signed out
+                    currentUser = null;
+                    authContainer.classList.remove('hidden');
+                    chatContainer.classList.add('hidden');
+                    
+                    // Clean up any existing subscriptions
+                    if (roomsUnsubscribe) roomsUnsubscribe();
+                    if (messagesUnsubscribe) messagesUnsubscribe();
+                    if (presenceUnsubscribe) presenceUnsubscribe();
+                }
+            });
         }
-
-        function resetPassword() {
-            const email = document.getElementById('resetEmail').value;
-            auth.sendPasswordResetEmail(email)
-                .then(() => alert('Password reset email sent!'))
-                .catch(error => alert(error.message));
+        
+        // Set up user profile
+        function setupUserProfile(user) {
+            userName.textContent = user.displayName || user.email.split('@')[0];
+            userEmail.textContent = user.email;
+            userAvatar.textContent = user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase();
+            
+            // Update user document in Firestore
+            const userRef = db.collection('users').doc(user.uid);
+            userRef.set({
+                name: user.displayName || user.email.split('@')[0],
+                email: user.email,
+                lastSeen: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
         }
-
-        // Chat Functions
-        function showChatSection() {
-            document.getElementById('authSection').classList.remove('active');
-            document.getElementById('chatSection').classList.add('active');
-            document.getElementById('historySection').classList.remove('active');
-        }
-
-        function showAuthSection() {
-            document.getElementById('authSection').classList.add('active');
-            document.getElementById('chatSection').classList.remove('active');
-            document.getElementById('historySection').classList.remove('active');
-        }
-
-        function createChatRoom() {
-            const roomId = db.collection('chatRooms').doc().id;
-            currentRoomId = roomId;
-            const url = `${window.location.origin}?room=${roomId}`;
-            document.getElementById('chatUrl').innerHTML = `Share this URL: <a href="${url}">${url}</a>`;
-            listenToMessages(roomId);
-            updateUserCount(roomId);
-            logActivity('Created chat room');
-        }
-
-        function listenToMessages(roomId) {
-            db.collection('chatRooms').doc(roomId).collection('messages')
-                .orderBy('timestamp')
-                .onSnapshot(snapshot => {
-                    const chatRoom = document.getElementById('chatRoom');
-                    chatRoom.innerHTML = '';
-                    snapshot.forEach(doc => {
-                        const data = doc.data();
-                        const div = document.createElement('div');
-                        div.className = 'message';
-                        if (data.imageUrl) {
-                            div.innerHTML = `<strong>${data.user}</strong>: <img src="${data.imageUrl}" alt="Sent Image"><br>${new Date(data.timestamp).toLocaleString()}`;
-                        } else {
-                            div.innerHTML = `<strong>${data.user}</strong>: ${data.text}<br>${new Date(data.timestamp).toLocaleString()}`;
-                        }
-                        chatRoom.appendChild(div);
-                    });
-                });
-        }
-
-        function sendMessage() {
-            const messageInput = document.getElementById('messageInput');
-            const imageInput = document.getElementById('imageInput');
-            const text = messageInput.value;
-            const file = imageInput.files[0];
-
-            if (!currentRoomId) {
-                alert('Create or join a chat room first!');
+        
+        // Login user
+        function loginUser() {
+            const email = loginEmail.value.trim();
+            const password = loginPassword.value.trim();
+            
+            if (!email || !password) {
+                loginError.textContent = 'Please enter both email and password';
                 return;
             }
-
-            if (file) {
-                const storageRef = storage.ref(`images/${currentRoomId}/${file.name}`);
-                storageRef.put(file).then(snapshot => {
-                    snapshot.ref.getDownloadURL().then(url => {
-                        db.collection('chatRooms').doc(currentRoomId).collection('messages').add({
-                            user: currentUser.email,
-                            imageUrl: url,
-                            timestamp: Date.now()
+            
+            showLoading(true);
+            
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    loginError.textContent = '';
+                    loginEmail.value = '';
+                    loginPassword.value = '';
+                })
+                .catch(error => {
+                    loginError.textContent = getAuthErrorMessage(error);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Sign up user
+        function signupUser() {
+            const name = signupName.value.trim();
+            const email = signupEmail.value.trim();
+            const password = signupPassword.value.trim();
+            const confirmPassword = signupConfirmPassword.value.trim();
+            
+            if (!name || !email || !password || !confirmPassword) {
+                signupError.textContent = 'Please fill in all fields';
+                return;
+            }
+            
+            if (password !== confirmPassword) {
+                signupError.textContent = 'Passwords do not match';
+                return;
+            }
+            
+            if (password.length < 6) {
+                signupError.textContent = 'Password should be at least 6 characters';
+                return;
+            }
+            
+            showLoading(true);
+            
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Update user profile with display name
+                    return userCredential.user.updateProfile({
+                        displayName: name
+                    });
+                })
+                .then(() => {
+                    signupError.textContent = '';
+                    signupName.value = '';
+                    signupEmail.value = '';
+                    signupPassword.value = '';
+                    signupConfirmPassword.value = '';
+                    
+                    // Switch to login form
+                    signupForm.classList.add('hidden');
+                    loginForm.classList.remove('hidden');
+                })
+                .catch(error => {
+                    signupError.textContent = getAuthErrorMessage(error);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Reset password
+        function resetPassword() {
+            const email = forgotEmail.value.trim();
+            
+            if (!email) {
+                forgotError.textContent = 'Please enter your email';
+                return;
+            }
+            
+            showLoading(true);
+            
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    forgotError.textContent = '';
+                    forgotSuccess.textContent = 'Password reset email sent. Please check your inbox.';
+                    forgotEmail.value = '';
+                })
+                .catch(error => {
+                    forgotError.textContent = getAuthErrorMessage(error);
+                    forgotSuccess.textContent = '';
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Logout user
+        function logoutUser() {
+            showLoading(true);
+            
+            auth.signOut()
+                .then(() => {
+                    // Reset UI
+                    currentRoomId = null;
+                    chatMessages.innerHTML = '';
+                    roomList.innerHTML = '';
+                    activityList.innerHTML = '';
+                    currentRoomName.textContent = 'Select a chat room';
+                    roomUsersCount.textContent = '0 users';
+                    messageInput.disabled = true;
+                })
+                .catch(error => {
+                    console.error('Logout error:', error);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Get auth error message
+        function getAuthErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/email-already-in-use':
+                    return 'Email already in use';
+                case 'auth/invalid-email':
+                    return 'Invalid email';
+                case 'auth/weak-password':
+                    return 'Password is too weak';
+                case 'auth/user-not-found':
+                    return 'User not found';
+                case 'auth/wrong-password':
+                    return 'Incorrect password';
+                case 'auth/too-many-requests':
+                    return 'Too many attempts. Try again later.';
+                default:
+                    return 'An error occurred. Please try again.';
+            }
+        }
+        
+        // Load chat rooms
+        function loadRooms() {
+            // Unsubscribe from previous listener if it exists
+            if (roomsUnsubscribe) roomsUnsubscribe();
+            
+            roomsUnsubscribe = db.collection('rooms')
+                .where('members', 'array-contains', currentUser.uid)
+                .orderBy('lastUpdated', 'desc')
+                .onSnapshot(snapshot => {
+                    roomList.innerHTML = '';
+                    
+                    snapshot.forEach(doc => {
+                        const room = doc.data();
+                        const roomItem = document.createElement('li');
+                        roomItem.className = 'room-item';
+                        roomItem.setAttribute('data-room-id', doc.id);
+                        roomItem.innerHTML = `
+                            <span>${room.name}</span>
+                            <span class="room-users-count">${room.members.length}</span>
+                        `;
+                        
+                        if (doc.id === currentRoomId) {
+                            roomItem.classList.add('active');
+                        }
+                        
+                        roomItem.addEventListener('click', () => {
+                            joinRoom(doc.id, room.name);
                         });
-                        logActivity('Sent an image');
+                        
+                        roomList.appendChild(roomItem);
                     });
+                    
+                    // Load activity history
+                    loadActivityHistory();
+                }, error => {
+                    console.error('Error loading rooms:', error);
                 });
-            } else if (text) {
-                db.collection('chatRooms').doc(currentRoomId).collection('messages').add({
-                    user: currentUser.email,
-                    text: text,
-                    timestamp: Date.now()
-                });
-                logActivity('Sent a message');
-            }
-
-            messageInput.value = '';
-            imageInput.value = '';
         }
-
-        function deleteChat() {
-            if (currentRoomId) {
-                db.collection('chatRooms').doc(currentRoomId).delete()
-                    .then(() => {
-                        document.getElementById('chatRoom').innerHTML = '';
-                        document.getElementById('chatUrl').innerHTML = '';
-                        currentRoomId = null;
-                        logActivity('Deleted chat room');
-                    });
+        
+        // Create a new room
+        function createRoom() {
+            const roomName = newRoomName.value.trim();
+            
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
             }
-        }
-
-        function updateUserCount(roomId) {
-            db.collection('chatRooms').doc(roomId).onSnapshot(doc => {
-                const data = doc.data() || { users: [] };
-                const userCount = data.users ? data.users.length : 0;
-                document.getElementById('userCount').textContent = `Users in room: ${userCount}`;
+            
+            showLoading(true);
+            
+            // Create room with current user as the first member
+            db.collection('rooms').add({
+                name: roomName,
+                createdBy: currentUser.uid,
+                members: [currentUser.uid],
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(docRef => {
+                newRoomName.value = '';
+                joinRoom(docRef.id, roomName);
+            })
+            .catch(error => {
+                console.error('Error creating room:', error);
+                alert('Failed to create room. Please try again.');
+            })
+            .finally(() => {
+                showLoading(false);
             });
         }
-
-        // Activity History
-        function logActivity(action) {
-            const log = document.getElementById('historyLog');
-            const entry = document.createElement('div');
-            entry.textContent = `${new Date().toLocaleString()}: ${action}`;
-            log.appendChild(entry);
+        
+        // Join a room
+        function joinRoom(roomId, roomName) {
+            // Unsubscribe from previous listeners if they exist
+            if (messagesUnsubscribe) messagesUnsubscribe();
+            if (presenceUnsubscribe) presenceUnsubscribe();
+            
+            // Update UI
+            currentRoomId = roomId;
+            currentRoomName.textContent = roomName;
+            messageInput.disabled = false;
+            
+            // Highlight selected room
+            document.querySelectorAll('.room-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`.room-item[data-room-id="${roomId}"]`).classList.add('active');
+            
+            // Load messages
+            loadMessages(roomId);
+            
+            // Track presence in this room
+            trackRoomPresence(roomId);
+            
+            // Add user to room members if not already a member
+            const roomRef = db.collection('rooms').doc(roomId);
+            roomRef.get().then(doc => {
+                if (doc.exists) {
+                    const room = doc.data();
+                    if (!room.members.includes(currentUser.uid)) {
+                        roomRef.update({
+                            members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                }
+            });
+            
+            // Record activity
+            recordActivity(`Joined room "${roomName}"`);
         }
-
-        function showTab(tab) {
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-
-            if (tab === 'chat') {
-                document.getElementById('chatSection').classList.add('active');
-                document.getElementById('historySection').classList.remove('active');
+        
+        // Load messages for a room
+        function loadMessages(roomId) {
+            chatMessages.innerHTML = '';
+            
+            messagesUnsubscribe = db.collection('rooms').doc(roomId)
+                .collection('messages')
+                .orderBy('timestamp', 'asc')
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            displayMessage(change.doc.data());
+                        }
+                    });
+                    
+                    // Scroll to bottom
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, error => {
+                    console.error('Error loading messages:', error);
+                });
+        }
+        
+        // Display a message
+        function displayMessage(message) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            
+            let contentHtml = '';
+            if (message.type === 'text') {
+                contentHtml = `<div class="message-content">${message.text}</div>`;
+            } else if (message.type === 'image') {
+                contentHtml = `
+                    <div class="message-content">Image shared</div>
+                    <img src="${message.url}" class="message-image" alt="Shared image">
+                `;
+            } else if (message.type === 'file') {
+                contentHtml = `
+                    <div class="message-content">File shared</div>
+                    <a href="${message.url}" target="_blank" class="file-link">Download ${message.fileName}</a>
+                `;
+            }
+            
+            messageDiv.innerHTML = `
+                ${contentHtml}
+                <div class="message-info">
+                    ${message.senderName} • ${formatTime(message.timestamp?.toDate())}
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+        }
+        
+        // Send a message
+        function sendMessage() {
+            const text = messageInput.value.trim();
+            
+            if (!text || !currentRoomId) return;
+            
+            showLoading(true);
+            
+            const message = {
+                text: text,
+                senderId: currentUser.uid,
+                senderName: currentUser.displayName || currentUser.email.split('@')[0],
+                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                type: 'text'
+            };
+            
+            db.collection('rooms').doc(currentRoomId)
+                .collection('messages')
+                .add(message)
+                .then(() => {
+                    // Update room's last updated time
+                    db.collection('rooms').doc(currentRoomId).update({
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    
+                    messageInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                    alert('Failed to send message. Please try again.');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Upload and send an image
+        function uploadImage() {
+            const file = imageUpload.files[0];
+            
+            if (!file) {
+                imageUploadError.textContent = 'Please select an image file';
+                return;
+            }
+            
+            if (!file.type.match('image.*')) {
+                imageUploadError.textContent = 'Only image files are allowed';
+                return;
+            }
+            
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                imageUploadError.textContent = 'Image size should be less than 5MB';
+                return;
+            }
+            
+            showLoading(true);
+            imageUploadError.textContent = '';
+            
+            const storageRef = storage.ref(`chat_images/${currentRoomId}/${Date.now()}_${file.name}`);
+            const uploadTask = storageRef.put(file);
+            
+            uploadTask.on('state_changed', 
+                null, 
+                error => {
+                    console.error('Upload error:', error);
+                    imageUploadError.textContent = 'Failed to upload image. Please try again.';
+                    showLoading(false);
+                }, 
+                () => {
+                    uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+                        const message = {
+                            url: downloadURL,
+                            senderId: currentUser.uid,
+                            senderName: currentUser.displayName || currentUser.email.split('@')[0],
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            type: 'image'
+                        };
+                        
+                        return db.collection('rooms').doc(currentRoomId)
+                            .collection('messages')
+                            .add(message);
+                    })
+                    .then(() => {
+                        // Update room's last updated time
+                        return db.collection('rooms').doc(currentRoomId).update({
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .then(() => {
+                        imageUpload.value = '';
+                        imageUploadModal.classList.add('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error sending image:', error);
+                        imageUploadError.textContent = 'Failed to send image. Please try again.';
+                    })
+                    .finally(() => {
+                        showLoading(false);
+                    });
+                }
+            );
+        }
+        
+        // Upload and send a file
+        function uploadFile() {
+            const file = fileUpload.files[0];
+            
+            if (!file) {
+                fileUploadError.textContent = 'Please select a file';
+                return;
+            }
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                fileUploadError.textContent = 'File size should be less than 10MB';
+                return;
+            }
+            
+            showLoading(true);
+            fileUploadError.textContent = '';
+            
+            const storageRef = storage.ref(`chat_files/${currentRoomId}/${Date.now()}_${file.name}`);
+            const uploadTask = storageRef.put(file);
+            
+            uploadTask.on('state_changed', 
+                null, 
+                error => {
+                    console.error('Upload error:', error);
+                    fileUploadError.textContent = 'Failed to upload file. Please try again.';
+                    showLoading(false);
+                }, 
+                () => {
+                    uploadTask.snapshot.ref.getDownloadURL().then(downloadURL => {
+                        const message = {
+                            url: downloadURL,
+                            fileName: file.name,
+                            fileType: file.type,
+                            fileSize: formatFileSize(file.size),
+                            senderId: currentUser.uid,
+                            senderName: currentUser.displayName || currentUser.email.split('@')[0],
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                            type: 'file'
+                        };
+                        
+                        return db.collection('rooms').doc(currentRoomId)
+                            .collection('messages')
+                            .add(message);
+                    })
+                    .then(() => {
+                        // Update room's last updated time
+                        return db.collection('rooms').doc(currentRoomId).update({
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    })
+                    .then(() => {
+                        fileUpload.value = '';
+                        fileUploadModal.classList.add('hidden');
+                    })
+                    .catch(error => {
+                        console.error('Error sending file:', error);
+                        fileUploadError.textContent = 'Failed to send file. Please try again.';
+                    })
+                    .finally(() => {
+                        showLoading(false);
+                    });
+                }
+            );
+        }
+        
+        // Copy room link to clipboard
+        function copyRoomLink() {
+            if (!currentRoomId) return;
+            
+            const roomLink = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
+            
+            navigator.clipboard.writeText(roomLink)
+                .then(() => {
+                    alert('Room link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Could not copy text: ', err);
+                    alert('Failed to copy room link. Please try again.');
+                });
+        }
+        
+        // Delete current room
+        function deleteRoom() {
+            if (!currentRoomId || !confirm('Are you sure you want to delete this room? This action cannot be undone.')) {
+                return;
+            }
+            
+            showLoading(true);
+            
+            // First, delete all messages in the room
+            db.collection('rooms').doc(currentRoomId)
+                .collection('messages').get()
+                .then(snapshot => {
+                    const batch = db.batch();
+                    snapshot.forEach(doc => {
+                        batch.delete(doc.ref);
+                    });
+                    return batch.commit();
+                })
+                .then(() => {
+                    // Then delete the room itself
+                    return db.collection('rooms').doc(currentRoomId).delete();
+                })
+                .then(() => {
+                    // Reset UI
+                    currentRoomId = null;
+                    chatMessages.innerHTML = '';
+                    currentRoomName.textContent = 'Select a chat room';
+                    roomUsersCount.textContent = '0 users';
+                    messageInput.disabled = true;
+                    
+                    // Record activity
+                    recordActivity('Deleted a chat room');
+                })
+                .catch(error => {
+                    console.error('Error deleting room:', error);
+                    alert('Failed to delete room. Please try again.');
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        // Track user presence
+        function trackUserPresence() {
+            const userStatusRef = db.collection('status').doc(currentUser.uid);
+            
+            // Firestore uses a local cache, so we need to handle online/offline states
+            const isOfflineForFirestore = {
+                state: 'offline',
+                lastChanged: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+            
+            const isOnlineForFirestore = {
+                state: 'online',
+                lastChanged: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+            
+            // Set up realtime listener for user's own status
+            db.collection('status').doc(currentUser.uid)
+                .onSnapshot((doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        console.log('User status:', data.state);
+                    }
+                });
+            
+            // Set user to online when they connect
+            db.collection('status').doc(currentUser.uid)
+                .set(isOnlineForFirestore);
+            
+            // Create a reference to the special '.info/connected' path in RTDB
+            const connectedRef = firebase.database().ref('.info/connected');
+            connectedRef.on('value', (snapshot) => {
+                if (snapshot.val() === false) {
+                    return;
+                }
+                
+                // When we disconnect, set user to offline
+                connectedRef.onDisconnect()
+                    .set(isOfflineForFirestore)
+                    .then(() => {
+                        // When we reconnect, set user back to online
+                        db.collection('status').doc(currentUser.uid)
+                            .set(isOnlineForFirestore);
+                    });
+            });
+        }
+        
+        // Track presence in the current room
+        function trackRoomPresence(roomId) {
+            // Unsubscribe from previous listener if it exists
+            if (presenceUnsubscribe) presenceUnsubscribe();
+            
+            const roomRef = db.collection('rooms').doc(roomId);
+            
+            presenceUnsubscribe = roomRef.collection('presence')
+                .onSnapshot(snapshot => {
+                    roomUsers = {};
+                    
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        if (data.userId !== currentUser.uid) {
+                            roomUsers[data.userId] = data;
+                        }
+                    });
+                    
+                    // Update UI with user count
+                    roomUsersCount.textContent = `${Object.keys(roomUsers).length + 1} users`;
+                });
+            
+            // Set up our presence in the room
+            const userPresenceRef = roomRef.collection('presence').doc(currentUser.uid);
+            
+            // Set user as present in the room
+            userPresenceRef.set({
+                userId: currentUser.uid,
+                name: currentUser.displayName || currentUser.email.split('@')[0],
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Set up disconnect cleanup
+            userPresenceRef.onDisconnect().delete();
+        }
+        
+        // Load activity history
+        function loadActivityHistory() {
+            db.collection('users').doc(currentUser.uid)
+                .collection('activity')
+                .orderBy('timestamp', 'desc')
+                .limit(50)
+                .get()
+                .then(snapshot => {
+                    activityList.innerHTML = '';
+                    
+                    if (snapshot.empty) {
+                        activityList.innerHTML = '<div class="activity-item">No activity yet</div>';
+                        return;
+                    }
+                    
+                    snapshot.forEach(doc => {
+                        const activity = doc.data();
+                        const activityItem = document.createElement('div');
+                        activityItem.className = 'activity-item';
+                        activityItem.innerHTML = `
+                            <div>${activity.action}</div>
+                            <div class="activity-time">${formatTime(activity.timestamp?.toDate())}</div>
+                        `;
+                        activityList.appendChild(activityItem);
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading activity:', error);
+                    activityList.innerHTML = '<div class="activity-item">Failed to load activity</div>';
+                });
+        }
+        
+        // Record user activity
+        function recordActivity(action) {
+            if (!currentUser) return;
+            
+            db.collection('users').doc(currentUser.uid)
+                .collection('activity')
+                .add({
+                    action: action,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                })
+                .catch(error => {
+                    console.error('Error recording activity:', error);
+                });
+        }
+        
+        // Switch between tabs
+        function switchTab(tabId) {
+            tabs.forEach(tab => {
+                if (tab.getAttribute('data-tab') === tabId) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
+            
+            tabContents.forEach(content => {
+                if (content.id === `${tabId}-tab`) {
+                    content.classList.add('active');
+                } else {
+                    content.classList.remove('active');
+                }
+            });
+        }
+        
+        // Format time
+        function formatTime(date) {
+            if (!date) return '';
+            
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
+                   ' • ' + date.toLocaleDateString();
+        }
+        
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        // Show loading spinner
+        function showLoading(show) {
+            if (show) {
+                loadingSpinner.classList.remove('hidden');
             } else {
-                document.getElementById('chatSection').classList.remove('active');
-                document.getElementById('historySection').classList.add('active');
+                loadingSpinner.classList.add('hidden');
             }
         }
-
-        // Join Room from URL
-        window.onload = () => {
+        
+        // Check for room ID in URL
+        function checkUrlForRoom() {
             const urlParams = new URLSearchParams(window.location.search);
             const roomId = urlParams.get('room');
+            
             if (roomId && currentUser) {
-                currentRoomId = roomId;
-                document.getElementById('chatUrl').innerHTML = `Room URL: ${window.location.href}`;
-                listenToMessages(roomId);
-                updateUserCount(roomId);
-                logActivity('Joined chat room');
+                // Check if room exists and user is a member
+                db.collection('rooms').doc(roomId).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            const room = doc.data();
+                            if (room.members.includes(currentUser.uid)) {
+                                joinRoom(roomId, room.name);
+                            } else {
+                                // Add user to room members
+                                db.collection('rooms').doc(roomId).update({
+                                    members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
+                                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                                })
+                                .then(() => {
+                                    joinRoom(roomId, room.name);
+                                });
+                            }
+                        } else {
+                            console.log('Room not found');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error checking room:', error);
+                    });
             }
-        };
-
-        // Update user presence (simplified)
-        auth.onAuthStateChanged(user => {
-            if (user && currentRoomId) {
-                db.collection('chatRooms').doc(currentRoomId).set({
-                    users: firebase.firestore.FieldValue.arrayUnion(user.email)
-                }, { merge: true });
-            }
+        }
+        
+        // Initialize the app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Check for room ID in URL when auth state changes
+        auth.onAuthStateChanged(() => {
+            checkUrlForRoom();
         });
     </script>
 </body>
 </html>
+        
