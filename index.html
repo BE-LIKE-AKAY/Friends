@@ -551,6 +551,25 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -685,7 +704,7 @@
                     <div>
                         <span id="room-users-count">0 users</span>
                         <button id="copy-room-link" title="Copy room link"><i class="fas fa-link"></i></button>
-                        <button id="delete-room-btn" title="Delete room"><i class="fas fa-trash"></i></button>
+                        <button id="delete-room-btn" title="Delete room" class="hidden"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
                 
@@ -736,10 +755,13 @@
         <div class="spinner"></div>
     </div>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
     <script>
         // Firebase configuration - Replace with your actual config
         const firebaseConfig = {
-            apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
+           apiKey: "AIzaSyBjh67gaNfzBTk1gNTA-bhvgZG4YX0bjeQ",
   authDomain: "friends-195c7.firebaseapp.com",
   databaseURL: "https://friends-195c7-default-rtdb.firebaseio.com",
   projectId: "friends-195c7",
@@ -842,9 +864,13 @@
         // Loading Spinner
         const loadingSpinner = document.getElementById('loading-spinner');
         
+        // Toast Notification
+        const toast = document.getElementById('toast');
+        
         // Global Variables
         let currentUser = null;
         let currentRoomId = null;
+        let currentRoomData = null;
         let roomsUnsubscribe = null;
         let messagesUnsubscribe = null;
         let presenceUnsubscribe = null;
@@ -1257,12 +1283,14 @@
                 .then(() => {
                     // Reset UI
                     currentRoomId = null;
+                    currentRoomData = null;
                     chatMessages.innerHTML = '';
                     roomList.innerHTML = '';
                     activityList.innerHTML = '';
                     currentRoomName.textContent = 'Select a chat room';
                     roomUsersCount.textContent = '0 users';
                     messageInput.disabled = true;
+                    deleteRoomBtn.classList.add('hidden');
                 })
                 .catch(error => {
                     console.error('Logout error:', error);
@@ -1322,7 +1350,7 @@
                         }
                         
                         roomItem.addEventListener('click', () => {
-                            joinRoom(doc.id, room.name);
+                            joinRoom(doc.id, room);
                         });
                         
                         roomList.appendChild(roomItem);
@@ -1340,7 +1368,7 @@
             const roomName = newRoomName.value.trim();
             
             if (!roomName) {
-                showErrorAlert('Please enter a room name');
+                showToast('Please enter a room name');
                 return;
             }
             
@@ -1366,20 +1394,25 @@
                 // Copy to clipboard
                 navigator.clipboard.writeText(roomUrl)
                     .then(() => {
-                        alert(`Room created! The invite link has been copied to your clipboard: ${roomUrl}`);
+                        showToast('Room created! The invite link has been copied to your clipboard.');
                     })
                     .catch(() => {
-                        alert(`Room created! Share this link: ${roomUrl}`);
+                        showToast(`Room created! Share this link: ${roomUrl}`);
                     });
                 
-                joinRoom(roomId, roomName);
+                // Join the new room
+                joinRoom(roomId, {
+                    name: roomName,
+                    createdBy: currentUser.uid,
+                    members: [currentUser.uid]
+                });
                 
                 // Record activity
                 recordActivity(`Created room "${roomName}"`);
             })
             .catch(error => {
                 console.error('Error creating room:', error);
-                showErrorAlert(getFirestoreErrorMessage(error));
+                showToast(getFirestoreErrorMessage(error));
             })
             .finally(() => {
                 showLoading(false);
@@ -1398,21 +1431,34 @@
             }
         }
         
-        // Show error alert
-        function showErrorAlert(message) {
-            alert(message);
+        // Show toast notification
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
         }
         
         // Join a room
-        function joinRoom(roomId, roomName) {
+        function joinRoom(roomId, roomData) {
             // Unsubscribe from previous listeners if they exist
             if (messagesUnsubscribe) messagesUnsubscribe();
             if (presenceUnsubscribe) presenceUnsubscribe();
             
             // Update UI
             currentRoomId = roomId;
-            currentRoomName.textContent = roomName;
+            currentRoomData = roomData;
+            currentRoomName.textContent = roomData.name;
             messageInput.disabled = false;
+            
+            // Show/hide delete button based on room ownership
+            if (roomData.createdBy === currentUser.uid) {
+                deleteRoomBtn.classList.remove('hidden');
+            } else {
+                deleteRoomBtn.classList.add('hidden');
+            }
             
             // Highlight selected room
             document.querySelectorAll('.room-item').forEach(item => {
@@ -1443,7 +1489,7 @@
             });
             
             // Record activity
-            recordActivity(`Joined room "${roomName}"`);
+            recordActivity(`Joined room "${roomData.name}"`);
         }
         
         // Load messages for a room
@@ -1534,7 +1580,7 @@
                 })
                 .catch(error => {
                     console.error('Error sending message:', error);
-                    showErrorAlert('Failed to send message. Please try again.');
+                    showToast('Failed to send message. Please try again.');
                 })
                 .finally(() => {
                     showLoading(false);
@@ -1687,14 +1733,14 @@
             
             navigator.clipboard.writeText(roomLink)
                 .then(() => {
-                    alert('Room link copied to clipboard!');
+                    showToast('Room link copied to clipboard!');
                     
                     // Record activity
                     recordActivity('Copied room link to clipboard');
                 })
                 .catch(err => {
                     console.error('Could not copy text: ', err);
-                    alert('Failed to copy room link. Please try again.');
+                    showToast('Failed to copy room link. Please try again.');
                 });
         }
         
@@ -1717,23 +1763,39 @@
                     return batch.commit();
                 })
                 .then(() => {
+                    // Then delete all presence data
+                    return db.collection('rooms').doc(currentRoomId)
+                        .collection('presence').get()
+                        .then(snapshot => {
+                            const batch = db.batch();
+                            snapshot.forEach(doc => {
+                                batch.delete(doc.ref);
+                            });
+                            return batch.commit();
+                        });
+                })
+                .then(() => {
                     // Then delete the room itself
                     return db.collection('rooms').doc(currentRoomId).delete();
                 })
                 .then(() => {
                     // Reset UI
                     currentRoomId = null;
+                    currentRoomData = null;
                     chatMessages.innerHTML = '';
                     currentRoomName.textContent = 'Select a chat room';
                     roomUsersCount.textContent = '0 users';
                     messageInput.disabled = true;
+                    deleteRoomBtn.classList.add('hidden');
                     
                     // Record activity
                     recordActivity('Deleted a chat room');
+                    
+                    showToast('Room deleted successfully');
                 })
                 .catch(error => {
                     console.error('Error deleting room:', error);
-                    alert('Failed to delete room. Please try again.');
+                    showToast('Failed to delete room. Please try again.');
                 })
                 .finally(() => {
                     showLoading(false);
@@ -1797,6 +1859,7 @@
         
         // Load activity history
         function loadActivityHistory() {
+            // Load user activities
             db.collection('users').doc(currentUser.uid)
                 .collection('activity')
                 .orderBy('timestamp', 'desc')
@@ -1824,6 +1887,35 @@
                 .catch(error => {
                     console.error('Error loading activity:', error);
                     activityList.innerHTML = '<div class="activity-item">Failed to load activity</div>';
+                });
+            
+            // Also load room activities
+            db.collection('rooms')
+                .where('members', 'array-contains', currentUser.uid)
+                .orderBy('lastUpdated', 'desc')
+                .limit(10)
+                .get()
+                .then(snapshot => {
+                    if (!snapshot.empty) {
+                        const roomActivityHeader = document.createElement('div');
+                        roomActivityHeader.className = 'activity-item';
+                        roomActivityHeader.innerHTML = '<strong>Your Chat Rooms</strong>';
+                        activityList.appendChild(roomActivityHeader);
+                        
+                        snapshot.forEach(doc => {
+                            const room = doc.data();
+                            const activityItem = document.createElement('div');
+                            activityItem.className = 'activity-item';
+                            activityItem.innerHTML = `
+                                <div>Room: ${room.name}</div>
+                                <div class="activity-time">Last active: ${formatTime(room.lastUpdated?.toDate())}</div>
+                            `;
+                            activityList.appendChild(activityItem);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading room activity:', error);
                 });
         }
         
@@ -1876,29 +1968,34 @@
             const roomId = urlParams.get('room');
             
             if (roomId && currentUser) {
-                // Check if room exists and user is a member
+                // Check if room exists
                 db.collection('rooms').doc(roomId).get()
                     .then(doc => {
                         if (doc.exists) {
                             const room = doc.data();
-                            if (room.members.includes(currentUser.uid)) {
-                                joinRoom(roomId, room.name);
-                            } else {
-                                // Add user to room members
-                                db.collection('rooms').doc(roomId).update({
+                            // Add user to room members if not already a member
+                            if (!room.members.includes(currentUser.uid)) {
+                                return db.collection('rooms').doc(roomId).update({
                                     members: firebase.firestore.FieldValue.arrayUnion(currentUser.uid),
                                     lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
                                 })
                                 .then(() => {
-                                    joinRoom(roomId, room.name);
+                                    return doc.data(); // Return updated room data
                                 });
                             }
+                            return room;
                         } else {
-                            console.log('Room not found');
+                            throw new Error('Room not found');
                         }
                     })
+                    .then(room => {
+                        joinRoom(roomId, room);
+                        // Clean up the URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    })
                     .catch(error => {
-                        console.error('Error checking room:', error);
+                        console.error('Error joining room from URL:', error);
+                        showToast('Room not found or you dont have access');
                     });
             }
         }
