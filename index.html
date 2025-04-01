@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat System with Firestore</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f0f0f0; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .auth-section, .chat-section, .history-section { display: none; }
+        .active { display: block; }
+        input, button { margin: 5px 0; padding: 8px; width: 100%; box-sizing: border-box; }
+        .chat-room { border: 1px solid #ddd; padding: 10px; margin-top: 10px; max-height: 400px; overflow-y: auto; }
+        .message { padding: 5px; border-bottom: 1px solid #eee; }
+        .message img { max-width: 100px; }
+        .tab { cursor: pointer; padding: 10px; background: #ddd; display: inline-block; margin-right: 5px; }
+        .tab.active { background: #bbb; }
+        #userCount { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Authentication Section -->
+        <div id="authSection" class="auth-section active">
+            <h2>Login / Signup</h2>
+            <input type="email" id="email" placeholder="Email">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="signup()">Signup</button>
+            <button onclick="login()">Login</button>
+            <button onclick="showForgotPassword()">Forgot Password?</button>
+            <div id="forgotPassword" style="display: none;">
+                <input type="email" id="resetEmail" placeholder="Enter your email">
+                <button onclick="resetPassword()">Reset Password</button>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div id="chatSection" class="chat-section">
+            <h2>Chat Room</h2>
+            <button onclick="createChatRoom()">Create Chat Room</button>
+            <button onclick="logout()">Logout</button>
+            <div id="chatUrl"></div>
+            <div id="userCount">Users in room: 0</div>
+            <div id="chatRoom" class="chat-room"></div>
+            <input type="text" id="messageInput" placeholder="Type a message">
+            <input type="file" id="imageInput" accept="image/*">
+            <button onclick="sendMessage()">Send</button>
+            <button onclick="deleteChat()">Delete Chat</button>
+            <div>
+                <span class="tab active" onclick="showTab('chat')">Chat</span>
+                <span class="tab" onclick="showTab('history')">Activity History</span>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div id="historySection" class="history-section">
+            <h2>Activity History</h2>
+            <div id="historyLog"></div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage.js"></script>
+
+    <script>
+        // Firebase Configuration (Replace with your own)
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+        let currentRoomId = null;
+        let currentUser = null;
+
+        // Authentication Functions
+        function signup() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    currentUser = userCredential.user;
+                    showChatSection();
+                })
+                .catch(error => alert(error.message));
+        }
+
+        function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            auth.signInWithEmailAndPassword(email, password)
+                .then(userCredential => {
+                    currentUser = userCredential.user;
+                    showChatSection();
+                })
+                .catch(error => alert(error.message));
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                currentUser = null;
+                currentRoomId = null;
+                showAuthSection();
+            });
+        }
+
+        function showForgotPassword() {
+            document.getElementById('forgotPassword').style.display = 'block';
+        }
+
+        function resetPassword() {
+            const email = document.getElementById('resetEmail').value;
+            auth.sendPasswordResetEmail(email)
+                .then(() => alert('Password reset email sent!'))
+                .catch(error => alert(error.message));
+        }
+
+        // Chat Functions
+        function showChatSection() {
+            document.getElementById('authSection').classList.remove('active');
+            document.getElementById('chatSection').classList.add('active');
+            document.getElementById('historySection').classList.remove('active');
+        }
+
+        function showAuthSection() {
+            document.getElementById('authSection').classList.add('active');
+            document.getElementById('chatSection').classList.remove('active');
+            document.getElementById('historySection').classList.remove('active');
+        }
+
+        function createChatRoom() {
+            const roomId = db.collection('chatRooms').doc().id;
+            currentRoomId = roomId;
+            const url = `${window.location.origin}?room=${roomId}`;
+            document.getElementById('chatUrl').innerHTML = `Share this URL: <a href="${url}">${url}</a>`;
+            listenToMessages(roomId);
+            updateUserCount(roomId);
+            logActivity('Created chat room');
+        }
+
+        function listenToMessages(roomId) {
+            db.collection('chatRooms').doc(roomId).collection('messages')
+                .orderBy('timestamp')
+                .onSnapshot(snapshot => {
+                    const chatRoom = document.getElementById('chatRoom');
+                    chatRoom.innerHTML = '';
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const div = document.createElement('div');
+                        div.className = 'message';
+                        if (data.imageUrl) {
+                            div.innerHTML = `<strong>${data.user}</strong>: <img src="${data.imageUrl}" alt="Sent Image"><br>${new Date(data.timestamp).toLocaleString()}`;
+                        } else {
+                            div.innerHTML = `<strong>${data.user}</strong>: ${data.text}<br>${new Date(data.timestamp).toLocaleString()}`;
+                        }
+                        chatRoom.appendChild(div);
+                    });
+                });
+        }
+
+        function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const imageInput = document.getElementById('imageInput');
+            const text = messageInput.value;
+            const file = imageInput.files[0];
+
+            if (!currentRoomId) {
+                alert('Create or join a chat room first!');
+                return;
+            }
+
+            if (file) {
+                const storageRef = storage.ref(`images/${currentRoomId}/${file.name}`);
+                storageRef.put(file).then(snapshot => {
+                    snapshot.ref.getDownloadURL().then(url => {
+                        db.collection('chatRooms').doc(currentRoomId).collection('messages').add({
+                            user: currentUser.email,
+                            imageUrl: url,
+                            timestamp: Date.now()
+                        });
+                        logActivity('Sent an image');
+                    });
+                });
+            } else if (text) {
+                db.collection('chatRooms').doc(currentRoomId).collection('messages').add({
+                    user: currentUser.email,
+                    text: text,
+                    timestamp: Date.now()
+                });
+                logActivity('Sent a message');
+            }
+
+            messageInput.value = '';
+            imageInput.value = '';
+        }
+
+        function deleteChat() {
+            if (currentRoomId) {
+                db.collection('chatRooms').doc(currentRoomId).delete()
+                    .then(() => {
+                        document.getElementById('chatRoom').innerHTML = '';
+                        document.getElementById('chatUrl').innerHTML = '';
+                        currentRoomId = null;
+                        logActivity('Deleted chat room');
+                    });
+            }
+        }
+
+        function updateUserCount(roomId) {
+            db.collection('chatRooms').doc(roomId).onSnapshot(doc => {
+                const data = doc.data() || { users: [] };
+                const userCount = data.users ? data.users.length : 0;
+                document.getElementById('userCount').textContent = `Users in room: ${userCount}`;
+            });
+        }
+
+        // Activity History
+        function logActivity(action) {
+            const log = document.getElementById('historyLog');
+            const entry = document.createElement('div');
+            entry.textContent = `${new Date().toLocaleString()}: ${action}`;
+            log.appendChild(entry);
+        }
+
+        function showTab(tab) {
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (tab === 'chat') {
+                document.getElementById('chatSection').classList.add('active');
+                document.getElementById('historySection').classList.remove('active');
+            } else {
+                document.getElementById('chatSection').classList.remove('active');
+                document.getElementById('historySection').classList.add('active');
+            }
+        }
+
+        // Join Room from URL
+        window.onload = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const roomId = urlParams.get('room');
+            if (roomId && currentUser) {
+                currentRoomId = roomId;
+                document.getElementById('chatUrl').innerHTML = `Room URL: ${window.location.href}`;
+                listenToMessages(roomId);
+                updateUserCount(roomId);
+                logActivity('Joined chat room');
+            }
+        };
+
+        // Update user presence (simplified)
+        auth.onAuthStateChanged(user => {
+            if (user && currentRoomId) {
+                db.collection('chatRooms').doc(currentRoomId).set({
+                    users: firebase.firestore.FieldValue.arrayUnion(user.email)
+                }, { merge: true });
+            }
+        });
+    </script>
+</body>
+</html>
