@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConnectHub - Advanced Chat Platform</title>
+    <title>ConnectHub Chat</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -38,7 +38,6 @@
             --danger-color: #ef233c;
         }
 
-        /* Base Styles */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
@@ -54,271 +53,8 @@
             padding: 20px;
         }
 
-        /* Header Styles */
-        .app-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            border-bottom: 1px solid var(--border-color);
-            margin-bottom: 20px;
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .logo i {
-            font-size: 28px;
-        }
-
-        /* Navigation */
-        .nav-tabs {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        .tab {
-            padding: 8px 15px;
-            cursor: pointer;
-            border-radius: 5px;
-            transition: all 0.2s;
-        }
-
-        .tab.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .tab:hover:not(.active) {
-            background-color: rgba(67, 97, 238, 0.1);
-        }
-
-        /* Main Chat Layout */
-        .chat-layout {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-            height: 70vh;
-        }
-
-        /* User List */
-        .user-list {
-            background-color: var(--container-bg);
-            border-radius: 10px;
-            padding: 15px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow-y: auto;
-        }
-
-        .user-list-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .user-card {
-            display: flex;
-            align-items: center;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .user-card:hover {
-            background-color: rgba(67, 97, 238, 0.1);
-        }
-
-        .user-card.active {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .user-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 10px;
-            font-weight: bold;
-        }
-
-        .user-status {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-left: auto;
-        }
-
-        .status-online {
-            background-color: var(--online-color);
-        }
-
-        .status-offline {
-            background-color: var(--offline-color);
-        }
-
-        /* Chat Area */
-        .chat-area {
-            display: flex;
-            flex-direction: column;
-            background-color: var(--container-bg);
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-
-        .chat-header {
-            padding: 15px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-        }
-
-        .chat-messages {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            background-color: rgba(67, 97, 238, 0.05);
-        }
-
-        .message {
-            display: flex;
-            margin-bottom: 15px;
-            max-width: 70%;
-        }
-
-        .message.sent {
-            margin-left: auto;
-            flex-direction: row-reverse;
-        }
-
-        .message.received {
-            margin-right: auto;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            margin: 0 10px;
-            flex-shrink: 0;
-        }
-
-        .message-content {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .message-bubble {
-            padding: 10px 15px;
-            border-radius: 18px;
-            margin-bottom: 5px;
-            word-wrap: break-word;
-        }
-
-        .sent .message-bubble {
-            background-color: var(--primary-color);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .received .message-bubble {
-            background-color: var(--border-color);
-            color: var(--text-color);
-            border-bottom-left-radius: 4px;
-        }
-
-        .message-info {
-            display: flex;
-            align-items: center;
-            font-size: 12px;
-            color: var(--text-color);
-            opacity: 0.7;
-        }
-
-        .message-time {
-            margin-left: 10px;
-        }
-
-        /* Message Input */
-        .message-input-area {
-            display: flex;
-            padding: 15px;
-            border-top: 1px solid var(--border-color);
-            background-color: var(--container-bg);
-        }
-
-        .message-input {
-            flex: 1;
-            padding: 12px 15px;
-            border: 1px solid var(--border-color);
-            border-radius: 25px;
-            outline: none;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-        }
-
-        .send-button {
-            margin-left: 10px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--primary-color);
-            color: white;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .send-button:hover {
-            background-color: var(--secondary-color);
-            transform: scale(1.05);
-        }
-
-        .attachment-button {
-            margin-right: 10px;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: var(--border-color);
-            color: var(--text-color);
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Auth Forms */
         .auth-container {
-            max-width: 500px;
+            max-width: 400px;
             margin: 50px auto;
             background-color: var(--container-bg);
             border-radius: 10px;
@@ -334,22 +70,16 @@
         }
 
         .auth-body {
-            padding: 30px;
+            padding: 20px;
         }
 
         .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
+            margin-bottom: 15px;
         }
 
         .form-control {
             width: 100%;
-            padding: 12px 15px;
+            padding: 10px;
             border: 1px solid var(--border-color);
             border-radius: 5px;
             background-color: var(--bg-color);
@@ -358,7 +88,7 @@
 
         .btn {
             display: inline-block;
-            padding: 12px 25px;
+            padding: 10px 15px;
             border-radius: 5px;
             border: none;
             cursor: pointer;
@@ -371,10 +101,6 @@
             color: white;
         }
 
-        .btn-primary:hover {
-            background-color: var(--secondary-color);
-        }
-
         .btn-block {
             display: block;
             width: 100%;
@@ -382,23 +108,151 @@
 
         .auth-footer {
             text-align: center;
-            margin-top: 20px;
-            padding-top: 20px;
+            margin-top: 15px;
+            padding-top: 15px;
             border-top: 1px solid var(--border-color);
         }
 
         .auth-link {
             color: var(--primary-color);
             cursor: pointer;
+            text-decoration: underline;
         }
 
-        /* Theme Toggle */
+        .app-container {
+            display: none;
+        }
+
+        .chat-container {
+            display: flex;
+            height: 70vh;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: var(--container-bg);
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+        }
+
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .messages-container {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background-color: var(--bg-color);
+        }
+
+        .message {
+            margin-bottom: 15px;
+            max-width: 70%;
+        }
+
+        .message.sent {
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .message.received {
+            margin-right: auto;
+        }
+
+        .message-bubble {
+            padding: 10px 15px;
+            border-radius: 18px;
+            display: inline-block;
+        }
+
+        .sent .message-bubble {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .received .message-bubble {
+            background-color: var(--border-color);
+            color: var(--text-color);
+        }
+
+        .message-input-area {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--container-bg);
+        }
+
+        .message-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            margin-right: 10px;
+        }
+
+        .user-list {
+            padding: 10px;
+        }
+
+        .user-card {
+            padding: 10px;
+            margin-bottom: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .user-card:hover {
+            background-color: rgba(67, 97, 238, 0.1);
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-left: auto;
+        }
+
+        .online {
+            background-color: var(--online-color);
+        }
+
+        .offline {
+            background-color: var(--offline-color);
+        }
+
         .theme-toggle {
             position: fixed;
-            bottom: 30px;
-            right: 30px;
-            width: 60px;
-            height: 60px;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
             border-radius: 50%;
             background-color: var(--primary-color);
             color: white;
@@ -407,81 +261,45 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
             z-index: 1000;
-            transition: all 0.3s;
         }
 
-        .theme-toggle:hover {
-            transform: scale(1.1);
-        }
-
-        /* Typing Indicator */
         .typing-indicator {
-            display: flex;
-            padding: 5px 15px;
-            background-color: var(--border-color);
-            border-radius: 15px;
-            width: fit-content;
-            margin-bottom: 10px;
-            align-items: center;
+            font-size: 12px;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin-bottom: 5px;
         }
 
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--text-color);
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: typingAnimation 1.4s infinite ease-in-out;
+        .error-message {
+            color: var(--danger-color);
+            font-size: 14px;
+            margin-top: 5px;
         }
 
-        .typing-dot:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes typingAnimation {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-5px); }
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .chat-layout {
-                grid-template-columns: 1fr;
-            }
-            
-            .user-list {
-                display: none;
-            }
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div id="auth-container" class="auth-container">
         <div class="auth-header">
-            <h2>Welcome to ConnectHub</h2>
-            <p>Connect with people around the world</p>
+            <h2>ConnectHub</h2>
+            <p>Sign in to start chatting</p>
         </div>
         <div class="auth-body">
             <div id="login-form">
                 <div class="form-group">
-                    <label for="login-email" class="form-label">Email</label>
-                    <input type="email" id="login-email" class="form-control" placeholder="Enter your email">
+                    <input type="email" id="login-email" class="form-control" placeholder="Email">
+                    <div id="login-email-error" class="error-message hidden"></div>
                 </div>
                 <div class="form-group">
-                    <label for="login-password" class="form-label">Password</label>
-                    <input type="password" id="login-password" class="form-control" placeholder="Enter your password">
+                    <input type="password" id="login-password" class="form-control" placeholder="Password">
+                    <div id="login-password-error" class="error-message hidden"></div>
                 </div>
-                <button id="login-button" class="btn btn-primary btn-block">Login</button>
+                <button id="login-button" class="btn btn-primary btn-block">Sign In</button>
                 <div class="auth-footer">
                     <span>Don't have an account? </span>
                     <span id="show-signup" class="auth-link">Sign up</span>
@@ -491,89 +309,69 @@
                 </div>
             </div>
 
-            <div id="signup-form" style="display: none;">
+            <div id="signup-form" class="hidden">
                 <div class="form-group">
-                    <label for="signup-email" class="form-label">Email</label>
-                    <input type="email" id="signup-email" class="form-control" placeholder="Enter your email">
+                    <input type="email" id="signup-email" class="form-control" placeholder="Email">
+                    <div id="signup-email-error" class="error-message hidden"></div>
                 </div>
                 <div class="form-group">
-                    <label for="signup-password" class="form-label">Password</label>
-                    <input type="password" id="signup-password" class="form-control" placeholder="Create a password (min 6 chars)">
+                    <input type="password" id="signup-password" class="form-control" placeholder="Password (min 6 chars)">
+                    <div id="signup-password-error" class="error-message hidden"></div>
                 </div>
                 <div class="form-group">
-                    <label for="signup-username" class="form-label">Username</label>
-                    <input type="text" id="signup-username" class="form-control" placeholder="Choose a username">
+                    <input type="text" id="signup-username" class="form-control" placeholder="Username">
+                    <div id="signup-username-error" class="error-message hidden"></div>
                 </div>
                 <button id="signup-button" class="btn btn-primary btn-block">Create Account</button>
                 <div class="auth-footer">
                     <span>Already have an account? </span>
-                    <span id="show-login" class="auth-link">Login</span>
+                    <span id="show-login" class="auth-link">Sign in</span>
                 </div>
             </div>
 
-            <div id="reset-form" style="display: none;">
+            <div id="reset-form" class="hidden">
                 <div class="form-group">
-                    <label for="reset-email" class="form-label">Email</label>
-                    <input type="email" id="reset-email" class="form-control" placeholder="Enter your email">
+                    <input type="email" id="reset-email" class="form-control" placeholder="Your email">
+                    <div id="reset-email-error" class="error-message hidden"></div>
                 </div>
                 <button id="reset-button" class="btn btn-primary btn-block">Send Reset Link</button>
                 <div class="auth-footer">
-                    <span id="show-login-from-reset" class="auth-link">Back to login</span>
+                    <span id="show-login-from-reset" class="auth-link">Back to sign in</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <div id="app-container" style="display: none;">
+    <div id="app-container" class="app-container">
         <div class="container">
-            <header class="app-header">
-                <div class="logo">
-                    <i class="fas fa-comments"></i>
-                    <span>ConnectHub</span>
-                </div>
-                <div>
-                    <button id="logout-button" class="btn" style="background-color: var(--danger-color); color: white;">Logout</button>
-                </div>
+            <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h1 style="color: var(--primary-color);">ConnectHub</h1>
+                <button id="logout-button" class="btn" style="background-color: var(--danger-color); color: white;">Logout</button>
             </header>
 
-            <div class="nav-tabs">
-                <div class="tab active" data-tab="chat">Chat</div>
-                <div class="tab" data-tab="discover">Discover</div>
-                <div class="tab" data-tab="profile">Profile</div>
-            </div>
-
-            <div class="chat-layout">
-                <div class="user-list">
-                    <div class="user-list-header">
+            <div class="chat-container">
+                <div class="sidebar">
+                    <div class="user-list" id="user-list">
                         <h3>Active Users</h3>
-                        <div id="user-count">0 online</div>
+                        <div id="users-container"></div>
                     </div>
-                    <div id="users-container"></div>
                 </div>
-
                 <div class="chat-area">
                     <div class="chat-header">
                         <div id="current-chat-info" style="display: flex; align-items: center;">
                             <div class="user-avatar" id="chat-avatar">G</div>
-                            <div>
+                            <div style="margin-left: 10px;">
                                 <div id="chat-username">Global Chat</div>
-                                <div id="chat-status" style="font-size: 12px; color: var(--online-color);">
-                                    <span id="typing-indicator" style="display: none;">typing...</span>
-                                </div>
+                                <div id="typing-indicator" class="typing-indicator"></div>
                             </div>
                         </div>
                     </div>
-                    <div class="chat-messages" id="chat-messages">
+                    <div class="messages-container" id="messages-container">
                         <!-- Messages will appear here -->
                     </div>
                     <div class="message-input-area">
-                        <button class="attachment-button" id="attachment-button">
-                            <i class="fas fa-paperclip"></i>
-                        </button>
                         <input type="text" class="message-input" id="message-input" placeholder="Type your message...">
-                        <button class="send-button" id="send-button">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
+                        <button id="send-button" class="btn btn-primary">Send</button>
                     </div>
                 </div>
             </div>
@@ -583,8 +381,6 @@
     <button id="theme-toggle" class="theme-toggle">
         <i class="fas fa-moon"></i>
     </button>
-
-    <input type="file" id="file-input" style="display: none;">
 
     <script src="app.js"></script>
 </body>
