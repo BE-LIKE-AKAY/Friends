@@ -12,413 +12,312 @@ const firebaseConfig = {
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
-const auth = firebase.auth();
 const database = firebase.database();
-const storage = firebase.storage();
+const auth = firebase.auth();
 
 // DOM elements
-const authContainer = document.getElementById('auth-container');
-const appContainer = document.getElementById('app-container');
-const loginForm = document.getElementById('login-form');
-const signupForm = document.getElementById('signup-form');
-const resetForm = document.getElementById('reset-form');
-const loginEmail = document.getElementById('login-email');
-const loginPassword = document.getElementById('login-password');
-const loginButton = document.getElementById('login-button');
-const signupEmail = document.getElementById('signup-email');
-const signupPassword = document.getElementById('signup-password');
-const signupUsername = document.getElementById('signup-username');
-const signupButton = document.getElementById('signup-button');
-const resetEmail = document.getElementById('reset-email');
-const resetButton = document.getElementById('reset-button');
-const showSignup = document.getElementById('show-signup');
-const showLogin = document.getElementById('show-login');
-const showReset = document.getElementById('show-reset');
-const showLoginFromReset = document.getElementById('show-login-from-reset');
-const logoutButton = document.getElementById('logout-button');
+const chatContainer = document.getElementById('chat-container');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
-const messagesContainer = document.getElementById('messages-container');
-const usersContainer = document.getElementById('users-container');
-const typingIndicator = document.getElementById('typing-indicator');
-const chatAvatar = document.getElementById('chat-avatar');
-const chatUsername = document.getElementById('chat-username');
-const themeToggle = document.getElementById('theme-toggle');
+const roomUrlInput = document.getElementById('room-url');
+const copyButton = document.getElementById('copy-button');
+const roomIdDisplay = document.getElementById('room-id-display');
+const userCountDisplay = document.getElementById('user-count');
+const signInButton = document.getElementById('signin-button');
+const signOutButton = document.getElementById('signout-button');
+const userInfoDiv = document.getElementById('user-info');
+const userNameSpan = document.getElementById('user-name');
+const emailAuthDiv = document.getElementById('email-auth');
+const emailInput = document.getElementById('email-input');
+const passwordInput = document.getElementById('password-input');
+const emailSignInButton = document.getElementById('email-signin-button');
+const emailSignUpButton = document.getElementById('email-signup-button');
+const authToggleLink = document.getElementById('toggle-email-auth');
+const authMessageDiv = document.getElementById('auth-message');
 
-// App state
+// Room management
+let currentRoomId = generateRoomId();
 let currentUser = null;
-let users = {};
-let currentRoom = 'global';
-let isTyping = false;
-let lastTypingTime = 0;
-let typingTimeout;
+let usersInRoom = {};
 
 // Initialize the app
 function init() {
-    // Check for dark mode preference
-    if (localStorage.getItem('darkMode') === 'enabled') {
-        document.body.classList.add('dark-mode');
-        themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+    // Check for room ID in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomId = urlParams.get('room');
+    
+    if (roomId && isValidRoomId(roomId)) {
+        currentRoomId = roomId;
     }
-
+    
+    updateRoomUrl();
+    roomIdDisplay.textContent = currentRoomId;
+    
     // Set up auth state listener
     auth.onAuthStateChanged(user => {
         if (user) {
+            // User is signed in
             currentUser = user;
-            setupUserProfile(user);
-            showApp();
-            setupChat();
+            userInfoDiv.style.display = 'block';
+            userNameSpan.textContent = user.displayName || user.email;
+            signInButton.style.display = 'none';
+            signOutButton.style.display = 'inline-block';
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            emailAuthDiv.style.display = 'none';
+            authToggleLink.style.display = 'none';
+            
+            // Join the room
+            joinRoom();
         } else {
+            // User is signed out
             currentUser = null;
-            showAuth();
+            userInfoDiv.style.display = 'none';
+            signInButton.style.display = 'inline-block';
+            signOutButton.style.display = 'none';
+            messageInput.disabled = true;
+            sendButton.disabled = true;
+            emailAuthDiv.style.display = 'none';
+            authToggleLink.style.display = 'block';
         }
     });
-
+    
     // Set up event listeners
-    setupEventListeners();
-}
-
-function setupEventListeners() {
-    // Theme toggle
-    themeToggle.addEventListener('click', toggleDarkMode);
-    
-    // Auth form toggles
-    showSignup.addEventListener('click', () => toggleAuthForms('signup'));
-    showLogin.addEventListener('click', () => toggleAuthForms('login'));
-    showReset.addEventListener('click', () => toggleAuthForms('reset'));
-    showLoginFromReset.addEventListener('click', () => toggleAuthForms('login'));
-    
-    // Auth actions
-    loginButton.addEventListener('click', loginWithEmail);
-    signupButton.addEventListener('click', signUpWithEmail);
-    resetButton.addEventListener('click', sendPasswordReset);
-    logoutButton.addEventListener('click', logout);
-    
-    // Chat actions
+    signInButton.addEventListener('click', signInWithGoogle);
+    signOutButton.addEventListener('click', signOut);
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') sendMessage();
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
+    copyButton.addEventListener('click', copyRoomUrl);
+    emailSignInButton.addEventListener('click', signInWithEmail);
+    emailSignUpButton.addEventListener('click', signUpWithEmail);
+    authToggleLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        toggleEmailAuth();
     });
     
-    // Typing detection
-    messageInput.addEventListener('input', updateTyping);
-}
-
-function toggleDarkMode() {
-    document.body.classList.toggle('dark-mode');
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
-    themeToggle.innerHTML = isDarkMode ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-}
-
-function toggleAuthForms(formToShow) {
-    loginForm.classList.toggle('hidden', formToShow !== 'login');
-    signupForm.classList.toggle('hidden', formToShow !== 'signup');
-    resetForm.classList.toggle('hidden', formToShow !== 'reset');
+    // Listen for messages
+    database.ref(`rooms/${currentRoomId}/messages`).on('child_added', snapshot => {
+        const message = snapshot.val();
+        displayMessage(message);
+    });
     
-    // Clear errors when switching forms
-    clearErrors();
-}
-
-function showApp() {
-    authContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-}
-
-function showAuth() {
-    authContainer.style.display = 'block';
-    appContainer.style.display = 'none';
-    // Show login form by default
-    toggleAuthForms('login');
-}
-
-function clearErrors() {
-    document.querySelectorAll('.error-message').forEach(el => {
-        el.classList.add('hidden');
-        el.textContent = '';
+    // Listen for user count changes
+    database.ref(`rooms/${currentRoomId}/users`).on('value', snapshot => {
+        usersInRoom = snapshot.val() || {};
+        const userCount = Object.keys(usersInRoom).length;
+        userCountDisplay.textContent = userCount;
+        
+        // Check if room is full (32 users)
+        if (userCount >= 32 && !usersInRoom[currentUser?.uid]) {
+            showAuthMessage('This room is full (32 users maximum). Please try another room.', 'error');
+            window.location.href = window.location.pathname; // Redirect to new room
+        }
     });
 }
 
-function showError(elementId, message) {
-    const errorElement = document.getElementById(elementId);
-    errorElement.textContent = message;
-    errorElement.classList.remove('hidden');
-}
-
-function loginWithEmail() {
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value.trim();
-    
-    clearErrors();
-    
-    if (!email) {
-        showError('login-email-error', 'Email is required');
-        return;
+// Generate a random room ID
+function generateRoomId() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
+    return result;
+}
+
+// Validate room ID format
+function isValidRoomId(roomId) {
+    return /^[A-Za-z0-9]{8}$/.test(roomId);
+}
+
+// Update the room URL in the input field
+function updateRoomUrl() {
+    const url = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
+    roomUrlInput.value = url;
+}
+
+// Copy room URL to clipboard
+function copyRoomUrl() {
+    roomUrlInput.select();
+    document.execCommand('copy');
+    copyButton.textContent = 'Copied!';
+    setTimeout(() => {
+        copyButton.textContent = 'Copy Link';
+    }, 2000);
+}
+
+// Show authentication message
+function showAuthMessage(message, type) {
+    authMessageDiv.textContent = message;
+    authMessageDiv.className = 'auth-message ' + type;
+    authMessageDiv.style.display = 'block';
     
-    if (!password) {
-        showError('login-password-error', 'Password is required');
+    setTimeout(() => {
+        authMessageDiv.style.display = 'none';
+    }, 5000);
+}
+
+// Sign in with Google
+function signInWithGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(error => {
+        console.error('Sign in error:', error);
+        showAuthMessage('Sign in failed: ' + error.message, 'error');
+    });
+}
+
+// Sign in with email/password
+function signInWithEmail() {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    
+    if (!email || !password) {
+        showAuthMessage('Please enter both email and password', 'error');
         return;
     }
     
     auth.signInWithEmailAndPassword(email, password)
         .catch(error => {
-            showError('login-password-error', error.message);
+            console.error('Email sign in error:', error);
+            showAuthMessage('Sign in failed: ' + error.message, 'error');
         });
 }
 
+// Sign up with email/password
 function signUpWithEmail() {
-    const email = signupEmail.value.trim();
-    const password = signupPassword.value.trim();
-    const username = signupUsername.value.trim();
+    const email = emailInput.value;
+    const password = passwordInput.value;
     
-    clearErrors();
-    
-    if (!email) {
-        showError('signup-email-error', 'Email is required');
-        return;
-    }
-    
-    if (!password) {
-        showError('signup-password-error', 'Password is required');
+    if (!email || !password) {
+        showAuthMessage('Please enter both email and password', 'error');
         return;
     }
     
     if (password.length < 6) {
-        showError('signup-password-error', 'Password must be at least 6 characters');
-        return;
-    }
-    
-    if (!username) {
-        showError('signup-username-error', 'Username is required');
+        showAuthMessage('Password should be at least 6 characters', 'error');
         return;
     }
     
     auth.createUserWithEmailAndPassword(email, password)
-        .then((userCredential) => {
-            // Add user to database
-            return database.ref('users/' + userCredential.user.uid).set({
-                username: username,
-                email: email,
-                status: 'online',
-                createdAt: firebase.database.ServerValue.TIMESTAMP,
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
-            });
-        })
-        .catch(error => {
-            showError('signup-email-error', error.message);
-        });
-}
-
-function sendPasswordReset() {
-    const email = resetEmail.value.trim();
-    
-    clearErrors();
-    
-    if (!email) {
-        showError('reset-email-error', 'Email is required');
-        return;
-    }
-    
-    auth.sendPasswordResetEmail(email)
         .then(() => {
-            alert('Password reset email sent. Please check your inbox.');
-            toggleAuthForms('login');
+            showAuthMessage('Account created successfully!', 'success');
+            // Optional: Send email verification
+            auth.currentUser.sendEmailVerification()
+                .then(() => {
+                    showAuthMessage('Verification email sent! Please check your inbox.', 'success');
+                });
         })
         .catch(error => {
-            showError('reset-email-error', error.message);
+            console.error('Email sign up error:', error);
+            showAuthMessage('Sign up failed: ' + error.message, 'error');
         });
 }
 
-function logout() {
-    // Update user status to offline
+// Toggle between email and Google auth
+function toggleEmailAuth() {
+    if (emailAuthDiv.style.display === 'none') {
+        emailAuthDiv.style.display = 'block';
+        authToggleLink.textContent = 'Use Google sign-in';
+        signInButton.style.display = 'none';
+    } else {
+        emailAuthDiv.style.display = 'none';
+        authToggleLink.textContent = 'Use email/password';
+        signInButton.style.display = 'inline-block';
+    }
+}
+
+// Sign out
+function signOut() {
+    // Remove user from room before signing out
     if (currentUser) {
-        database.ref('users/' + currentUser.uid).update({
-            status: 'offline',
-            lastSeen: firebase.database.ServerValue.TIMESTAMP
-        });
+        database.ref(`rooms/${currentRoomId}/users/${currentUser.uid}`).remove();
     }
     auth.signOut();
 }
 
-function setupUserProfile(user) {
-    // Set user online status
-    const userStatusRef = database.ref('users/' + user.uid);
+// Join the current room
+function joinRoom() {
+    if (!currentUser) return;
     
-    userStatusRef.onDisconnect().update({
-        status: 'offline',
-        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    const userRef = database.ref(`rooms/${currentRoomId}/users/${currentUser.uid}`);
+    
+    // Set user data
+    userRef.set({
+        name: currentUser.displayName || currentUser.email,
+        joinedAt: firebase.database.ServerValue.TIMESTAMP
     });
     
-    userStatusRef.update({
-        status: 'online',
-        lastSeen: firebase.database.ServerValue.TIMESTAMP
-    });
-}
-
-function setupChat() {
-    // Load users
-    database.ref('users').on('value', (snapshot) => {
-        users = snapshot.val() || {};
-        renderUserList();
-    });
-    
-    // Load messages
-    database.ref('rooms/' + currentRoom + '/messages').limitToLast(50).on('child_added', (snapshot) => {
-        const message = snapshot.val();
-        displayMessage(message);
-    });
-    
-    // Listen for typing indicators
-    database.ref('rooms/' + currentRoom + '/typing').on('child_changed', (snapshot) => {
-        const typingData = snapshot.val();
-        if (typingData.userId !== currentUser.uid && typingData.isTyping) {
-            showTypingIndicator(typingData.username);
-        } else {
-            hideTypingIndicator();
-        }
+    // Remove user when they leave (close browser/tab)
+    window.addEventListener('beforeunload', () => {
+        userRef.remove();
     });
 }
 
-function renderUserList() {
-    usersContainer.innerHTML = '';
-    
-    Object.keys(users).forEach(userId => {
-        const user = users[userId];
-        if (userId === currentUser.uid) return; // Don't show current user in list
-        
-        const userCard = document.createElement('div');
-        userCard.className = 'user-card';
-        userCard.innerHTML = `
-            <div class="user-avatar">${user.username.charAt(0).toUpperCase()}</div>
-            <div>${user.username}</div>
-            <div class="status-indicator ${user.status === 'online' ? 'online' : 'offline'}"></div>
-        `;
-        
-        userCard.addEventListener('click', () => {
-            startPrivateChat(userId, user.username);
-        });
-        
-        usersContainer.appendChild(userCard);
-    });
-}
-
-function startPrivateChat(userId, username) {
-    // Clear existing listeners to prevent duplicates
-    database.ref('rooms/' + currentRoom + '/messages').off();
-    database.ref('rooms/' + currentRoom + '/typing').off();
-    
-    currentRoom = `private_${[currentUser.uid, userId].sort().join('_')}`;
-    chatUsername.textContent = username;
-    chatAvatar.textContent = username.charAt(0).toUpperCase();
-    messagesContainer.innerHTML = '';
-    
-    // Load private messages
-    database.ref('rooms/' + currentRoom + '/messages').limitToLast(50).on('child_added', (snapshot) => {
-        const message = snapshot.val();
-        displayMessage(message);
-    });
-    
-    // Listen for typing indicators in private chat
-    database.ref('rooms/' + currentRoom + '/typing').on('child_changed', (snapshot) => {
-        const typingData = snapshot.val();
-        if (typingData.userId !== currentUser.uid && typingData.isTyping) {
-            showTypingIndicator(typingData.username);
-        } else {
-            hideTypingIndicator();
-        }
-    });
-}
-
-function displayMessage(message) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${message.senderId === currentUser.uid ? 'sent' : 'received'}`;
-    
-    const sender = users[message.senderId] || { username: 'Unknown' };
-    const time = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    messageDiv.innerHTML = `
-        <div class="message-bubble">${message.text}</div>
-        <div style="font-size: 12px; margin-top: 5px;">
-            ${sender.username} • ${time}
-        </div>
-    `;
-    
-    messagesContainer.appendChild(messageDiv);
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-}
-
+// Send a message
 function sendMessage() {
-    const text = messageInput.value.trim();
-    if (!text || !currentUser) return;
+    if (!currentUser || !messageInput.value.trim()) return;
     
     const message = {
-        text: text,
+        text: messageInput.value.trim(),
         senderId: currentUser.uid,
-        senderName: users[currentUser.uid]?.username || currentUser.email,
+        senderName: currentUser.displayName || currentUser.email,
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     
-    database.ref('rooms/' + currentRoom + '/messages').push(message)
-        .then(() => {
-            messageInput.value = '';
-            stopTyping();
-        })
+    // Push message to Firebase
+    database.ref(`rooms/${currentRoomId}/messages`).push(message)
         .catch(error => {
-            alert('Failed to send message: ' + error.message);
+            console.error('Error sending message:', error);
+            showAuthMessage('Failed to send message: ' + error.message, 'error');
         });
+    
+    // Clear input
+    messageInput.value = '';
 }
 
-function updateTyping() {
-    if (!currentUser) return;
+// Display a message in the chat
+function displayMessage(message) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message');
     
-    const currentTime = new Date().getTime();
-    
-    if (!isTyping) {
-        isTyping = true;
-        database.ref('rooms/' + currentRoom + '/typing/' + currentUser.uid).set({
-            userId: currentUser.uid,
-            username: users[currentUser.uid]?.username || currentUser.email,
-            isTyping: true,
-            timestamp: currentTime
-        });
+    if (message.senderId === currentUser?.uid) {
+        messageDiv.classList.add('sent');
+    } else {
+        messageDiv.classList.add('received');
     }
     
-    lastTypingTime = currentTime;
+    const senderName = document.createElement('div');
+    senderName.style.fontWeight = 'bold';
+    senderName.style.marginBottom = '4px';
+    senderName.textContent = message.senderName;
     
-    if (!typingTimeout) {
-        typingTimeout = setTimeout(() => {
-            const timeSinceLastTyping = new Date().getTime() - lastTypingTime;
-            if (timeSinceLastTyping >= 2000 && isTyping) {
-                stopTyping();
-            }
-        }, 2000);
-    }
+    const messageText = document.createElement('div');
+    messageText.textContent = message.text;
+    
+    const timestamp = document.createElement('div');
+    timestamp.style.fontSize = '0.8em';
+    timestamp.style.marginTop = '4px';
+    timestamp.style.textAlign = 'right';
+    timestamp.textContent = formatTimestamp(message.timestamp);
+    
+    messageDiv.appendChild(senderName);
+    messageDiv.appendChild(messageText);
+    messageDiv.appendChild(timestamp);
+    
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function stopTyping() {
-    if (!currentUser) return;
+// Format timestamp
+function formatTimestamp(timestamp) {
+    if (!timestamp) return '';
     
-    if (typingTimeout) {
-        clearTimeout(typingTimeout);
-        typingTimeout = null;
-    }
-    
-    if (isTyping) {
-        isTyping = false;
-        database.ref('rooms/' + currentRoom + '/typing/' + currentUser.uid).update({
-            isTyping: false,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
-        });
-    }
-}
-
-function showTypingIndicator(username) {
-    typingIndicator.textContent = `${username} is typing...`;
-}
-
-function hideTypingIndicator() {
-    typingIndicator.textContent = '';
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 // Initialize the app when the page loads
