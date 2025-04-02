@@ -50,6 +50,19 @@ const signUpPasswordConfirm = document.getElementById('signup-password-confirm')
 const signUpButton = document.getElementById('signup-button');
 const signUpMessage = document.getElementById('signup-message');
 
+// Password reset elements
+const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+const passwordResetModal = document.getElementById('password-reset-modal');
+const closeModalBtn = document.querySelector('.close-modal');
+const resetEmailInput = document.getElementById('reset-email');
+const resetPasswordBtn = document.getElementById('reset-password-btn');
+const resetMessage = document.getElementById('reset-message');
+
+// Password toggle elements
+const toggleSigninPassword = document.getElementById('toggle-signin-password');
+const toggleSignupPassword = document.getElementById('toggle-signup-password');
+const toggleSignupPasswordConfirm = document.getElementById('toggle-signup-password-confirm');
+
 // Chat state
 let currentRoomId = generateRoomId();
 let currentUser = null;
@@ -89,6 +102,9 @@ function init() {
     
     // Auto-resize textarea
     setupTextareaAutoResize();
+    
+    // Setup password toggle
+    setupPasswordToggle();
 }
 
 function handleUserSignIn(user) {
@@ -159,12 +175,47 @@ function setupEventListeners() {
     // Auth form submissions
     signInButton.addEventListener('click', signInWithEmail);
     signUpButton.addEventListener('click', signUpWithEmail);
+    
+    // Password reset
+    forgotPasswordBtn.addEventListener('click', showPasswordResetModal);
+    closeModalBtn.addEventListener('click', hidePasswordResetModal);
+    resetPasswordBtn.addEventListener('click', sendPasswordResetEmail);
+    
+    // Close modal when clicking outside
+    passwordResetModal.addEventListener('click', (e) => {
+        if (e.target === passwordResetModal) {
+            hidePasswordResetModal();
+        }
+    });
 }
 
 function setupTextareaAutoResize() {
     messageInput.addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
+    });
+}
+
+function setupPasswordToggle() {
+    // Toggle password visibility for signin
+    toggleSigninPassword.addEventListener('click', function() {
+        const type = signInPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+        signInPassword.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
+    });
+    
+    // Toggle password visibility for signup
+    toggleSignupPassword.addEventListener('click', function() {
+        const type = signUpPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+        signUpPassword.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
+    });
+    
+    // Toggle password visibility for signup confirm
+    toggleSignupPasswordConfirm.addEventListener('click', function() {
+        const type = signUpPasswordConfirm.getAttribute('type') === 'password' ? 'text' : 'password';
+        signUpPasswordConfirm.setAttribute('type', type);
+        this.classList.toggle('fa-eye-slash');
     });
 }
 
@@ -244,10 +295,43 @@ async function signInWithEmail() {
     }
     
     try {
-        await auth.signInWithEmailAndPassword(email, password);
+        signInButton.disabled = true;
+        signInButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing In...';
+        
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // Check if email is verified
+        if (!user.emailVerified) {
+            await user.sendEmailVerification();
+            showMessage('Please verify your email. A new verification link has been sent.', 'error', 'signin');
+            await auth.signOut();
+        }
     } catch (error) {
         console.error('Sign in error:', error);
-        showMessage('Sign in failed: ' + error.message, 'error', 'signin');
+        let errorMessage = 'Sign in failed. ';
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+                errorMessage += 'No user found with this email.';
+                break;
+            case 'auth/wrong-password':
+                errorMessage += 'Incorrect password.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage += 'Invalid email address.';
+                break;
+            case 'auth/user-disabled':
+                errorMessage += 'This account has been disabled.';
+                break;
+            default:
+                errorMessage += error.message;
+        }
+        
+        showMessage(errorMessage, 'error', 'signin');
+    } finally {
+        signInButton.disabled = false;
+        signInButton.textContent = 'Sign In';
     }
 }
 
@@ -272,8 +356,16 @@ async function signUpWithEmail() {
     }
     
     try {
-        await auth.createUserWithEmailAndPassword(email, password);
-        showMessage('Account created successfully!', 'success', 'signup');
+        signUpButton.disabled = true;
+        signUpButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing Up...';
+        
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        // Send email verification
+        await user.sendEmailVerification();
+        
+        showMessage('Account created successfully! Please check your email to verify your account.', 'success', 'signup');
         
         // Clear form
         signUpEmail.value = '';
@@ -284,7 +376,26 @@ async function signUpWithEmail() {
         document.querySelector('.auth-tab[data-tab="signin"]').click();
     } catch (error) {
         console.error('Sign up error:', error);
-        showMessage('Sign up failed: ' + error.message, 'error', 'signup');
+        let errorMessage = 'Sign up failed. ';
+        
+        switch (error.code) {
+            case 'auth/email-already-in-use':
+                errorMessage += 'Email already in use.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage += 'Invalid email address.';
+                break;
+            case 'auth/weak-password':
+                errorMessage += 'Password is too weak.';
+                break;
+            default:
+                errorMessage += error.message;
+        }
+        
+        showMessage(errorMessage, 'error', 'signup');
+    } finally {
+        signUpButton.disabled = false;
+        signUpButton.textContent = 'Sign Up';
     }
 }
 
@@ -428,18 +539,18 @@ async function sendMessage() {
         
         // Disable send button while sending
         sendButton.disabled = true;
+        sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         
         await database.ref(`rooms/${currentRoomId}/messages`).push(message);
-        
-        // Re-enable send button
-        sendButton.disabled = false;
     } catch (error) {
         console.error('Error sending message:', error);
         showMessage('Failed to send message: ' + error.message, 'error');
         
         // Restore message if failed to send
         messageInput.value = messageText;
+    } finally {
         sendButton.disabled = false;
+        sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
     }
 }
 
@@ -526,6 +637,64 @@ function updateTypingIndicator(typingUsers) {
     }
     
     typingIndicator.textContent = message;
+}
+
+function showPasswordResetModal() {
+    passwordResetModal.style.display = 'flex';
+    resetEmailInput.value = signInEmail.value || '';
+    resetMessage.style.display = 'none';
+}
+
+function hidePasswordResetModal() {
+    passwordResetModal.style.display = 'none';
+}
+
+async function sendPasswordResetEmail() {
+    const email = resetEmailInput.value.trim();
+    
+    if (!email) {
+        resetMessage.textContent = 'Please enter your email address';
+        resetMessage.className = 'message-box error';
+        resetMessage.style.display = 'block';
+        return;
+    }
+    
+    try {
+        resetPasswordBtn.disabled = true;
+        resetPasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        
+        await auth.sendPasswordResetEmail(email);
+        
+        resetMessage.textContent = 'Password reset email sent. Please check your inbox.';
+        resetMessage.className = 'message-box success';
+        resetMessage.style.display = 'block';
+        
+        // Hide modal after 3 seconds
+        setTimeout(() => {
+            hidePasswordResetModal();
+        }, 3000);
+    } catch (error) {
+        console.error('Password reset error:', error);
+        
+        let errorMessage = 'Failed to send reset email. ';
+        switch (error.code) {
+            case 'auth/user-not-found':
+                errorMessage += 'No user found with this email.';
+                break;
+            case 'auth/invalid-email':
+                errorMessage += 'Invalid email address.';
+                break;
+            default:
+                errorMessage += error.message;
+        }
+        
+        resetMessage.textContent = errorMessage;
+        resetMessage.className = 'message-box error';
+        resetMessage.style.display = 'block';
+    } finally {
+        resetPasswordBtn.disabled = false;
+        resetPasswordBtn.textContent = 'Send Reset Link';
+    }
 }
 
 function formatTimestamp(timestamp) {
