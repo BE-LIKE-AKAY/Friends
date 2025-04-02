@@ -9,6 +9,16 @@ const firebaseConfig = {
             appId: "1:487210823099:web:30fb0fb91cd484486e289e",
             measurementId: "G-PSLN4J6DGL"
 };
+// Firebase configuration - REPLACE WITH YOUR CONFIG
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DATABASE_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+};
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
@@ -16,7 +26,10 @@ const database = firebase.database();
 const auth = firebase.auth();
 
 // DOM elements
+const authSection = document.getElementById('auth-section');
+const chatSection = document.getElementById('chat-section');
 const chatContainer = document.getElementById('chat-container');
+const welcomeMessage = document.getElementById('welcome-message');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 const roomUrlInput = document.getElementById('room-url');
@@ -26,13 +39,12 @@ const userCountDisplay = document.getElementById('user-count');
 const userInfoDiv = document.getElementById('user-info');
 const userNameSpan = document.getElementById('user-name');
 const userEmailSpan = document.getElementById('user-email');
-const userAvatarImg = document.getElementById('user-avatar');
+const userAvatar = document.getElementById('user-avatar');
 const signOutButton = document.getElementById('signout-button');
-const authSection = document.getElementById('auth-section');
-const authForms = document.getElementById('auth-forms');
-const guestModeDiv = document.getElementById('guest-mode');
+const guestNotice = document.getElementById('guest-notice');
 const showAuthButton = document.getElementById('show-auth-button');
 const continueGuestButton = document.getElementById('continue-guest-button');
+const typingIndicator = document.getElementById('typing-indicator');
 
 // Auth form elements
 const authTabs = document.querySelectorAll('.auth-tab');
@@ -48,11 +60,15 @@ const signUpPasswordConfirm = document.getElementById('signup-password-confirm')
 const signUpButton = document.getElementById('signup-button');
 const signUpMessage = document.getElementById('signup-message');
 
-// Room management
+// Chat state
 let currentRoomId = generateRoomId();
 let currentUser = null;
 let usersInRoom = {};
 let isGuest = false;
+let lastTypingTime = 0;
+let typingTimeout = null;
+let isTyping = false;
+let messageCount = 0;
 
 // Initialize the app
 function init() {
@@ -71,35 +87,66 @@ function init() {
     auth.onAuthStateChanged(user => {
         if (user) {
             // User is signed in
-            currentUser = user;
-            isGuest = false;
-            updateUserInfo(user);
-            userInfoDiv.style.display = 'flex';
-            guestModeDiv.style.display = 'none';
-            authForms.style.display = 'none';
-            messageInput.disabled = false;
-            sendButton.disabled = false;
-            
-            // Join the room
-            joinRoom();
+            handleUserSignIn(user);
         } else {
             // User is signed out
-            currentUser = null;
-            userInfoDiv.style.display = 'none';
-            
-            // Show guest mode by default
-            enableGuestMode();
+            handleUserSignOut();
         }
     });
     
     // Set up event listeners
+    setupEventListeners();
+    
+    // Auto-resize textarea
+    setupTextareaAutoResize();
+}
+
+function handleUserSignIn(user) {
+    currentUser = user;
+    isGuest = false;
+    updateUserInfo(user);
+    userInfoDiv.style.display = 'flex';
+    guestNotice.style.display = 'none';
+    authSection.style.display = 'none';
+    chatSection.style.display = 'block';
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    
+    // Join the room
+    joinRoom();
+}
+
+function handleUserSignOut() {
+    currentUser = null;
+    userInfoDiv.style.display = 'none';
+    authSection.style.display = 'block';
+    chatSection.style.display = 'none';
+    
+    // Show guest mode by default
+    enableGuestMode();
+}
+
+function setupEventListeners() {
+    // Auth and navigation
     signOutButton.addEventListener('click', signOut);
+    showAuthButton.addEventListener('click', showAuthForms);
+    continueGuestButton.addEventListener('click', enableGuestMode);
+    
+    // Message sending
     sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
+    messageInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
             sendMessage();
         }
     });
+    
+    // Typing indicator
+    messageInput.addEventListener('input', () => {
+        updateTypingStatus(true);
+    });
+    
+    // Room sharing
     copyButton.addEventListener('click', copyRoomUrl);
     
     // Auth tab switching
@@ -122,28 +169,12 @@ function init() {
     // Auth form submissions
     signInButton.addEventListener('click', signInWithEmail);
     signUpButton.addEventListener('click', signUpWithEmail);
-    
-    // Guest mode buttons
-    showAuthButton.addEventListener('click', showAuthForms);
-    continueGuestButton.addEventListener('click', enableGuestMode);
-    
-    // Listen for messages
-    database.ref(`rooms/${currentRoomId}/messages`).on('child_added', snapshot => {
-        const message = snapshot.val();
-        displayMessage(message);
-    });
-    
-    // Listen for user count changes
-    database.ref(`rooms/${currentRoomId}/users`).on('value', snapshot => {
-        usersInRoom = snapshot.val() || {};
-        const userCount = Object.keys(usersInRoom).length;
-        userCountDisplay.textContent = userCount;
-        
-        // Check if room is full (32 users)
-        if (userCount >= 32 && !usersInRoom[currentUser?.uid]) {
-            showMessage('This room is full (32 users maximum). Please try another room.', 'error');
-            window.location.href = window.location.pathname; // Redirect to new room
-        }
+}
+
+function setupTextareaAutoResize() {
+    messageInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
     });
 }
 
@@ -157,18 +188,15 @@ function generateRoomId() {
     return result;
 }
 
-// Validate room ID format
 function isValidRoomId(roomId) {
     return /^[A-Za-z0-9]{8}$/.test(roomId);
 }
 
-// Update the room URL in the input field
 function updateRoomUrl() {
     const url = `${window.location.origin}${window.location.pathname}?room=${currentRoomId}`;
     roomUrlInput.value = url;
 }
 
-// Copy room URL to clipboard
 function copyRoomUrl() {
     roomUrlInput.select();
     document.execCommand('copy');
@@ -181,11 +209,10 @@ function copyRoomUrl() {
     }, 2000);
 }
 
-// Show message in auth forms
 function showMessage(message, type, form = 'signin') {
     const messageDiv = form === 'signin' ? signInMessage : signUpMessage;
     messageDiv.textContent = message;
-    messageDiv.className = 'auth-message ' + type;
+    messageDiv.className = 'message-box ' + type;
     messageDiv.style.display = 'block';
     
     setTimeout(() => {
@@ -193,22 +220,31 @@ function showMessage(message, type, form = 'signin') {
     }, 5000);
 }
 
-// Update user info display
 function updateUserInfo(user) {
-    userNameSpan.textContent = user.displayName || 'User';
+    const displayName = user.displayName || user.email.split('@')[0];
+    userNameSpan.textContent = displayName;
     userEmailSpan.textContent = user.email;
     
-    // Set avatar (using Gravatar as fallback)
-    if (user.photoURL) {
-        userAvatarImg.src = user.photoURL;
-    } else if (user.email) {
-        const hash = md5(user.email.trim().toLowerCase());
-        userAvatarImg.src = `https://www.gravatar.com/avatar/${hash}?d=identicon`;
-    }
+    // Set avatar initials
+    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+    userAvatar.textContent = initials;
+    userAvatar.style.backgroundColor = stringToColor(user.email);
 }
 
-// Sign in with email/password
-function signInWithEmail() {
+function stringToColor(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    let color = '#';
+    for (let i = 0; i < 3; i++) {
+        const value = (hash >> (i * 8)) & 0xFF;
+        color += ('00' + value.toString(16)).substr(-2);
+    }
+    return color;
+}
+
+async function signInWithEmail() {
     const email = signInEmail.value;
     const password = signInPassword.value;
     
@@ -217,15 +253,15 @@ function signInWithEmail() {
         return;
     }
     
-    auth.signInWithEmailAndPassword(email, password)
-        .catch(error => {
-            console.error('Email sign in error:', error);
-            showMessage('Sign in failed: ' + error.message, 'error', 'signin');
-        });
+    try {
+        await auth.signInWithEmailAndPassword(email, password);
+    } catch (error) {
+        console.error('Sign in error:', error);
+        showMessage('Sign in failed: ' + error.message, 'error', 'signin');
+    }
 }
 
-// Sign up with email/password
-function signUpWithEmail() {
+async function signUpWithEmail() {
     const email = signUpEmail.value;
     const password = signUpPassword.value;
     const passwordConfirm = signUpPasswordConfirm.value;
@@ -245,24 +281,23 @@ function signUpWithEmail() {
         return;
     }
     
-    auth.createUserWithEmailAndPassword(email, password)
-        .then(() => {
-            showMessage('Account created successfully!', 'success', 'signup');
-            // Clear form
-            signUpEmail.value = '';
-            signUpPassword.value = '';
-            signUpPasswordConfirm.value = '';
-            
-            // Switch to sign in tab
-            document.querySelector('.auth-tab[data-tab="signin"]').click();
-        })
-        .catch(error => {
-            console.error('Email sign up error:', error);
-            showMessage('Sign up failed: ' + error.message, 'error', 'signup');
-        });
+    try {
+        await auth.createUserWithEmailAndPassword(email, password);
+        showMessage('Account created successfully!', 'success', 'signup');
+        
+        // Clear form
+        signUpEmail.value = '';
+        signUpPassword.value = '';
+        signUpPasswordConfirm.value = '';
+        
+        // Switch to sign in tab
+        document.querySelector('.auth-tab[data-tab="signin"]').click();
+    } catch (error) {
+        console.error('Sign up error:', error);
+        showMessage('Sign up failed: ' + error.message, 'error', 'signup');
+    }
 }
 
-// Sign out
 function signOut() {
     // Remove user from room before signing out
     if (currentUser && !isGuest) {
@@ -272,23 +307,24 @@ function signOut() {
     enableGuestMode();
 }
 
-// Show auth forms
 function showAuthForms() {
-    guestModeDiv.style.display = 'none';
+    guestNotice.style.display = 'none';
     authForms.style.display = 'block';
 }
 
-// Enable guest mode
 function enableGuestMode() {
     isGuest = true;
     currentUser = {
         uid: 'guest_' + Math.random().toString(36).substr(2, 9),
-        displayName: 'Guest',
+        displayName: 'Guest' + Math.floor(Math.random() * 1000),
         email: null
     };
     
-    guestModeDiv.style.display = 'flex';
+    updateUserInfo(currentUser);
+    guestNotice.style.display = 'flex';
     authForms.style.display = 'none';
+    authSection.style.display = 'none';
+    chatSection.style.display = 'block';
     messageInput.disabled = false;
     sendButton.disabled = false;
     
@@ -296,7 +332,6 @@ function enableGuestMode() {
     joinRoom();
 }
 
-// Join the current room
 function joinRoom() {
     if (!currentUser) return;
     
@@ -304,46 +339,57 @@ function joinRoom() {
     
     // Set user data
     userRef.set({
-        name: currentUser.displayName || (isGuest ? 'Guest' : 'User'),
+        name: currentUser.displayName,
         isGuest: isGuest,
-        joinedAt: firebase.database.ServerValue.TIMESTAMP
+        joinedAt: firebase.database.ServerValue.TIMESTAMP,
+        isTyping: false,
+        lastActive: firebase.database.ServerValue.TIMESTAMP
     });
+    
+    // Update last active time every 30 seconds
+    const activeInterval = setInterval(() => {
+        userRef.update({
+            lastActive: firebase.database.ServerValue.TIMESTAMP
+        });
+    }, 30000);
+    
+    // Set up message listener
+    setupMessageListener();
+    
+    // Set up user count listener
+    setupUserCountListener();
+    
+    // Set up typing listener
+    setupTypingListener();
     
     // Remove user when they leave (close browser/tab)
     window.addEventListener('beforeunload', () => {
+        clearInterval(activeInterval);
         userRef.remove();
     });
 }
 
-// Send a message
-function sendMessage() {
-    if (!currentUser || !messageInput.value.trim()) return;
-    
-    const message = {
-        text: messageInput.value.trim(),
-        senderId: currentUser.uid,
-        senderName: currentUser.displayName || (isGuest ? 'Guest' : 'User'),
-        isGuest: isGuest,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    };
-    
-    // Push message to Firebase
-    database.ref(`rooms/${currentRoomId}/messages`).push(message)
-        .catch(error => {
-            console.error('Error sending message:', error);
-            showMessage('Failed to send message: ' + error.message, 'error');
-        });
-    
-    // Clear input
-    messageInput.value = '';
+function setupMessageListener() {
+    database.ref(`rooms/${currentRoomId}/messages`).limitToLast(100).on('child_added', snapshot => {
+        const message = snapshot.val();
+        displayMessage(message);
+        
+        // Hide welcome message after first message
+        if (messageCount === 0) {
+            welcomeMessage.style.display = 'none';
+        }
+        messageCount++;
+    });
 }
 
-// Display a message in the chat
 function displayMessage(message) {
     const messageDiv = document.createElement('div');
     messageDiv.classList.add('message');
     
-    if (message.senderId === currentUser?.uid) {
+    // Determine if message is from current user
+    const isCurrentUser = message.senderId === (currentUser?.uid || (isGuest && currentUser?.uid));
+    
+    if (isCurrentUser) {
         messageDiv.classList.add('sent');
     } else {
         messageDiv.classList.add('received');
@@ -369,136 +415,134 @@ function displayMessage(message) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-// Format timestamp
+async function sendMessage() {
+    const messageText = messageInput.value.trim();
+    if ((!currentUser && !isGuest) || !messageText) return;
+    
+    const senderId = isGuest ? currentUser.uid : currentUser?.uid;
+    const senderName = isGuest ? currentUser.displayName : currentUser?.displayName || currentUser?.email.split('@')[0];
+    
+    const message = {
+        text: messageText,
+        senderId: senderId,
+        senderName: senderName,
+        isGuest: isGuest,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+    
+    try {
+        // Reset input field immediately for better UX
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        updateTypingStatus(false);
+        
+        // Disable send button while sending
+        sendButton.disabled = true;
+        
+        await database.ref(`rooms/${currentRoomId}/messages`).push(message);
+        
+        // Re-enable send button
+        sendButton.disabled = false;
+    } catch (error) {
+        console.error('Error sending message:', error);
+        showMessage('Failed to send message: ' + error.message, 'error');
+        
+        // Restore message if failed to send
+        messageInput.value = messageText;
+        sendButton.disabled = false;
+    }
+}
+
+function setupUserCountListener() {
+    database.ref(`rooms/${currentRoomId}/users`).on('value', snapshot => {
+        const users = snapshot.val() || {};
+        
+        // Filter out inactive users (last active > 2 minutes ago)
+        const now = Date.now();
+        const activeUsers = Object.keys(users).filter(userId => {
+            return users[userId].lastActive && (now - users[userId].lastActive) < 120000;
+        });
+        
+        usersInRoom = activeUsers.reduce((acc, userId) => {
+            acc[userId] = users[userId];
+            return acc;
+        }, {});
+        
+        const userCount = activeUsers.length;
+        userCountDisplay.textContent = userCount;
+        
+        // Check if room is full (32 users)
+        if (userCount >= 32 && !usersInRoom[currentUser?.uid]) {
+            showMessage('This room is full (32 users maximum). Please try another room.', 'error');
+            window.location.href = window.location.pathname; // Redirect to new room
+        }
+    });
+}
+
+function setupTypingListener() {
+    database.ref(`rooms/${currentRoomId}/users`).on('value', snapshot => {
+        const users = snapshot.val() || {};
+        const typingUsers = [];
+        
+        Object.keys(users).forEach(userId => {
+            if (userId !== currentUser?.uid && users[userId].isTyping) {
+                typingUsers.push(users[userId].name);
+            }
+        });
+        
+        updateTypingIndicator(typingUsers);
+    });
+}
+
+function updateTypingStatus(typing) {
+    if (!currentUser || isTyping === typing) return;
+    
+    clearTimeout(typingTimeout);
+    
+    if (typing) {
+        // User started typing
+        isTyping = true;
+        database.ref(`rooms/${currentRoomId}/users/${currentUser.uid}`).update({
+            isTyping: true,
+            lastActive: firebase.database.ServerValue.TIMESTAMP
+        });
+        
+        // Set timeout to stop typing after 3 seconds of inactivity
+        typingTimeout = setTimeout(() => {
+            updateTypingStatus(false);
+        }, 3000);
+    } else {
+        // User stopped typing
+        isTyping = false;
+        database.ref(`rooms/${currentRoomId}/users/${currentUser.uid}`).update({
+            isTyping: false
+        });
+    }
+}
+
+function updateTypingIndicator(typingUsers) {
+    if (typingUsers.length === 0) {
+        typingIndicator.textContent = '';
+        return;
+    }
+    
+    let message = '';
+    if (typingUsers.length === 1) {
+        message = `${typingUsers[0]} is typing...`;
+    } else if (typingUsers.length === 2) {
+        message = `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
+    } else {
+        message = `${typingUsers[0]}, ${typingUsers[1]} and others are typing...`;
+    }
+    
+    typingIndicator.textContent = message;
+}
+
 function formatTimestamp(timestamp) {
     if (!timestamp) return '';
     
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
-
-// Simple MD5 function for Gravatar (from https://stackoverflow.com/a/60467595)
-function md5(string) {
-    function rotateLeft(value, amount) {
-        return (value << amount) | (value >>> (32 - amount));
-    }
-    
-    function cmn(q, a, b, x, s, t) {
-        return rotateLeft((a + q + x + t) | 0, s) + b | 0;
-    }
-    
-    function ff(a, b, c, d, x, s, t) {
-        return cmn((b & c) | (~b & d), a, b, x, s, t);
-    }
-    
-    function gg(a, b, c, d, x, s, t) {
-        return cmn((b & d) | (c & ~d), a, b, x, s, t);
-    }
-    
-    function hh(a, b, c, d, x, s, t) {
-        return cmn(b ^ c ^ d, a, b, x, s, t);
-    }
-    
-    function ii(a, b, c, d, x, s, t) {
-        return cmn(c ^ (b | ~d), a, b, x, s, t);
-    }
-    
-    const blocks = new Uint8Array(((string.length + 8) >> 6) + 1 << 6);
-    for (let i = 0; i < string.length; i++) {
-        blocks[i >> 2] |= string.charCodeAt(i) << (i % 4 << 3);
-    }
-    blocks[string.length >> 2] |= 0x80 << (string.length % 4 << 3);
-    blocks[blocks.length - 2] = string.length * 8;
-    
-    let a = 1732584193;
-    let b = -271733879;
-    let c = -1732584194;
-    let d = 271733878;
-    
-    for (let i = 0; i < blocks.length; i += 16) {
-        const aa = a;
-        const bb = b;
-        const cc = c;
-        const dd = d;
-        
-        a = ff(a, b, c, d, blocks[i + 0], 7, -680876936);
-        d = ff(d, a, b, c, blocks[i + 1], 12, -389564586);
-        c = ff(c, d, a, b, blocks[i + 2], 17, 606105819);
-        b = ff(b, c, d, a, blocks[i + 3], 22, -1044525330);
-        a = ff(a, b, c, d, blocks[i + 4], 7, -176418897);
-        d = ff(d, a, b, c, blocks[i + 5], 12, 1200080426);
-        c = ff(c, d, a, b, blocks[i + 6], 17, -1473231341);
-        b = ff(b, c, d, a, blocks[i + 7], 22, -45705983);
-        a = ff(a, b, c, d, blocks[i + 8], 7, 1770035416);
-        d = ff(d, a, b, c, blocks[i + 9], 12, -1958414417);
-        c = ff(c, d, a, b, blocks[i + 10], 17, -42063);
-        b = ff(b, c, d, a, blocks[i + 11], 22, -1990404162);
-        a = ff(a, b, c, d, blocks[i + 12], 7, 1804603682);
-        d = ff(d, a, b, c, blocks[i + 13], 12, -40341101);
-        c = ff(c, d, a, b, blocks[i + 14], 17, -1502002290);
-        b = ff(b, c, d, a, blocks[i + 15], 22, 1236535329);
-        
-        a = gg(a, b, c, d, blocks[i + 1], 5, -165796510);
-        d = gg(d, a, b, c, blocks[i + 6], 9, -1069501632);
-        c = gg(c, d, a, b, blocks[i + 11], 14, 643717713);
-        b = gg(b, c, d, a, blocks[i + 0], 20, -373897302);
-        a = gg(a, b, c, d, blocks[i + 5], 5, -701558691);
-        d = gg(d, a, b, c, blocks[i + 10], 9, 38016083);
-        c = gg(c, d, a, b, blocks[i + 15], 14, -660478335);
-        b = gg(b, c, d, a, blocks[i + 4], 20, -405537848);
-        a = gg(a, b, c, d, blocks[i + 9], 5, 568446438);
-        d = gg(d, a, b, c, blocks[i + 14], 9, -1019803690);
-        c = gg(c, d, a, b, blocks[i + 3], 14, -187363961);
-        b = gg(b, c, d, a, blocks[i + 8], 20, 1163531501);
-        a = gg(a, b, c, d, blocks[i + 13], 5, -1444681467);
-        d = gg(d, a, b, c, blocks[i + 2], 9, -51403784);
-        c = gg(c, d, a, b, blocks[i + 7], 14, 1735328473);
-        b = gg(b, c, d, a, blocks[i + 12], 20, -1926607734);
-        
-        a = hh(a, b, c, d, blocks[i + 5], 4, -378558);
-        d = hh(d, a, b, c, blocks[i + 8], 11, -2022574463);
-        c = hh(c, d, a, b, blocks[i + 11], 16, 1839030562);
-        b = hh(b, c, d, a, blocks[i + 14], 23, -35309556);
-        a = hh(a, b, c, d, blocks[i + 1], 4, -1530992060);
-        d = hh(d, a, b, c, blocks[i + 4], 11, 1272893353);
-        c = hh(c, d, a, b, blocks[i + 7], 16, -155497632);
-        b = hh(b, c, d, a, blocks[i + 10], 23, -1094730640);
-        a = hh(a, b, c, d, blocks[i + 13], 4, 681279174);
-        d = hh(d, a, b, c, blocks[i + 0], 11, -358537222);
-        c = hh(c, d, a, b, blocks[i + 3], 16, -722521979);
-        b = hh(b, c, d, a, blocks[i + 6], 23, 76029189);
-        a = hh(a, b, c, d, blocks[i + 9], 4, -640364487);
-        d = hh(d, a, b, c, blocks[i + 12], 11, -421815835);
-        c = hh(c, d, a, b, blocks[i + 15], 16, 530742520);
-        b = hh(b, c, d, a, blocks[i + 2], 23, -995338651);
-        
-        a = ii(a, b, c, d, blocks[i + 0], 6, -198630844);
-        d = ii(d, a, b, c, blocks[i + 7], 10, 1126891415);
-        c = ii(c, d, a, b, blocks[i + 14], 15, -1416354905);
-        b = ii(b, c, d, a, blocks[i + 5], 21, -57434055);
-        a = ii(a, b, c, d, blocks[i + 12], 6, 1700485571);
-        d = ii(d, a, b, c, blocks[i + 3], 10, -1894986606);
-        c = ii(c, d, a, b, blocks[i + 10], 15, -1051523);
-        b = ii(b, c, d, a, blocks[i + 1], 21, -2054922799);
-        a = ii(a, b, c, d, blocks[i + 8], 6, 1873313359);
-        d = ii(d, a, b, c, blocks[i + 15], 10, -30611744);
-        c = ii(c, d, a, b, blocks[i + 6], 15, -1560198380);
-        b = ii(b, c, d, a, blocks[i + 13], 21, 1309151649);
-        a = ii(a, b, c, d, blocks[i + 4], 6, -145523070);
-        d = ii(d, a, b, c, blocks[i + 11], 10, -1120210379);
-        c = ii(c, d, a, b, blocks[i + 2], 15, 718787259);
-        b = ii(b, c, d, a, blocks[i + 9], 21, -343485551);
-        
-        a = a + aa | 0;
-        b = b + bb | 0;
-        c = c + cc | 0;
-        d = d + dd | 0;
-    }
-    
-    return [a, b, c, d].map(x => {
-        const hex = (x >>> 0).toString(16);
-        return '00000000'.substr(0, 8 - hex.length) + hex;
-    }).join('');
 }
 
 // Initialize the app when the page loads
