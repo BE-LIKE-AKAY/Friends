@@ -3,82 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HTMLK Chat</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <!-- Font Awesome -->
+    <title>Modern Chat App</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4361ee;
-            --secondary-color: #3f37c9;
-            --accent-color: #4895ef;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --success-color: #4bb543;
-            --error-color: #ff3333;
-            --warning-color: #ffcc00;
+            --primary: #4361ee;
+            --primary-light: #e0e7ff;
+            --secondary: #3f37c9;
+            --accent: #4895ef;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --success: #4bb543;
+            --error: #ff3333;
+            --warning: #ffcc00;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.05);
+            --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         }
         
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Poppins', sans-serif;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
-            color: var(--dark-color);
+            background-color: #f5f7fb;
+            color: var(--dark);
             line-height: 1.6;
         }
         
         .container {
             max-width: 1000px;
             margin: 20px auto;
-            padding: 20px;
-            background-color: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 0;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
         }
         
-        h1 {
-            text-align: center;
-            color: var(--primary-color);
-            margin-bottom: 20px;
+        .app-header {
+            background-color: var(--primary);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .app-title {
+            font-size: 1.5rem;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
         
         /* Auth Section */
         .auth-section {
-            background-color: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 25px;
-            transition: all 0.3s ease;
+            padding: 30px;
+            background: white;
         }
         
         .auth-tabs {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--light-gray);
         }
         
         .auth-tab {
-            padding: 10px 20px;
+            padding: 12px 24px;
             cursor: pointer;
             font-weight: 500;
-            color: #666;
+            color: var(--gray);
             border-bottom: 3px solid transparent;
-            transition: all 0.3s ease;
+            transition: var(--transition);
         }
         
         .auth-tab.active {
-            color: var(--primary-color);
-            border-bottom: 3px solid var(--primary-color);
+            color: var(--primary);
+            border-bottom-color: var(--primary);
         }
         
         .auth-form {
@@ -90,48 +100,49 @@
         }
         
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 20px;
         }
         
         .form-group label {
             display: block;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
             font-weight: 500;
-            color: #555;
+            color: var(--dark);
         }
         
         .form-control {
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 14px 16px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
             font-size: 16px;
-            transition: border 0.3s ease;
+            transition: var(--transition);
         }
         
         .form-control:focus {
-            border-color: var(--primary-color);
+            border-color: var(--primary);
             outline: none;
             box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
         }
         
         .btn {
             display: inline-block;
-            padding: 12px 20px;
-            background-color: var(--primary-color);
+            padding: 14px 24px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: var(--transition);
             text-align: center;
         }
         
         .btn:hover {
-            background-color: var(--secondary-color);
+            background: var(--secondary);
             transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
         }
         
         .btn-block {
@@ -140,48 +151,58 @@
         }
         
         .btn-ghost {
-            background-color: transparent;
-            color: var(--primary-color);
-            border: 1px solid var(--primary-color);
+            background: transparent;
+            color: var(--primary);
+            border: 1px solid var(--primary);
         }
         
         .btn-ghost:hover {
-            background-color: rgba(67, 97, 238, 0.1);
+            background: rgba(67, 97, 238, 0.1);
+            transform: none;
+            box-shadow: none;
         }
         
-        .auth-message {
-            padding: 12px;
-            border-radius: 6px;
-            margin-bottom: 15px;
+        .message-box {
+            padding: 14px;
+            border-radius: 8px;
+            margin-bottom: 20px;
             display: none;
+            font-size: 14px;
         }
         
-        .auth-message.success {
-            background-color: rgba(75, 181, 67, 0.1);
-            color: var(--success-color);
+        .success {
+            background: rgba(75, 181, 67, 0.1);
+            color: var(--success);
             display: block;
         }
         
-        .auth-message.error {
-            background-color: rgba(255, 51, 51, 0.1);
-            color: var(--error-color);
+        .error {
+            background: rgba(255, 51, 51, 0.1);
+            color: var(--error);
             display: block;
         }
         
         .user-info {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
-            padding: 12px;
-            background-color: rgba(67, 97, 238, 0.1);
-            border-radius: 6px;
+            margin-bottom: 20px;
+            padding: 16px;
+            background: var(--primary-light);
+            border-radius: 12px;
         }
         
-        .user-info img {
-            width: 40px;
-            height: 40px;
+        .user-avatar {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            margin-right: 10px;
+            margin-right: 12px;
+            background: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
         }
         
         .user-details {
@@ -189,64 +210,86 @@
         }
         
         .user-name {
-            font-weight: 500;
+            font-weight: 600;
+            color: var(--dark);
         }
         
         .user-email {
             font-size: 14px;
-            color: #666;
+            color: var(--gray);
+        }
+        
+        /* Guest Mode */
+        .guest-notice {
+            background: rgba(255, 204, 0, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 4px solid var(--warning);
+        }
+        
+        .guest-notice i {
+            color: var(--warning);
+            margin-right: 10px;
         }
         
         /* Chat Section */
+        .chat-area {
+            display: flex;
+            flex-direction: column;
+            height: 600px;
+        }
+        
         .room-info {
+            padding: 16px 24px;
+            background: white;
+            border-bottom: 1px solid var(--light-gray);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
         }
         
         .room-id {
             font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .room-id span {
-            color: var(--primary-color);
+            color: var(--primary);
             font-weight: 600;
         }
         
         .user-count {
             display: flex;
             align-items: center;
-        }
-        
-        .user-count i {
-            margin-right: 5px;
-            color: var(--accent-color);
+            gap: 6px;
+            font-size: 14px;
+            color: var(--gray);
         }
         
         .chat-container {
-            height: 500px;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
+            flex: 1;
             overflow-y: auto;
-            padding: 15px;
-            margin-bottom: 20px;
-            background-color: white;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            background: #fafbfe;
+            display: flex;
+            flex-direction: column;
         }
         
         .message {
-            margin-bottom: 15px;
+            margin-bottom: 16px;
             padding: 12px 16px;
             border-radius: 18px;
-            max-width: 70%;
+            max-width: 75%;
             word-wrap: break-word;
             position: relative;
             animation: fadeIn 0.3s ease;
+            box-shadow: var(--shadow-sm);
         }
         
         @keyframes fadeIn {
@@ -255,35 +298,33 @@
         }
         
         .sent {
-            background-color: var(--primary-color);
+            background: var(--primary);
             color: white;
             margin-left: auto;
             border-bottom-right-radius: 4px;
         }
         
         .received {
-            background-color: #e9ecef;
-            color: black;
+            background: white;
+            color: var(--dark);
             margin-right: auto;
             border-bottom-left-radius: 4px;
+            border: 1px solid var(--light-gray);
         }
         
         .message-sender {
             font-weight: 600;
-            margin-bottom: 5px;
+            margin-bottom: 6px;
             font-size: 14px;
         }
         
         .sent .message-sender {
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        .received .message-sender {
-            color: #555;
+            color: rgba(255, 255, 255, 0.9);
         }
         
         .message-text {
-            margin-bottom: 5px;
+            margin-bottom: 6px;
+            line-height: 1.5;
         }
         
         .message-time {
@@ -293,97 +334,129 @@
         }
         
         .input-area {
+            padding: 16px;
+            background: white;
+            border-top: 1px solid var(--light-gray);
             display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+            gap: 12px;
         }
         
         #message-input {
             flex-grow: 1;
-            padding: 12px 15px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 14px 16px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
             font-size: 16px;
-            transition: all 0.3s ease;
+            resize: none;
+            min-height: 50px;
+            max-height: 120px;
         }
         
         #message-input:focus {
-            border-color: var(--primary-color);
+            border-color: var(--primary);
             outline: none;
             box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
         }
         
         #send-button {
-            padding: 12px 20px;
-            background-color: var(--primary-color);
+            padding: 0 20px;
+            background: var(--primary);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 50px;
+            transition: var(--transition);
         }
         
         #send-button:hover {
-            background-color: var(--secondary-color);
+            background: var(--secondary);
         }
         
         #send-button:disabled {
-            background-color: #ccc;
+            background: var(--light-gray);
+            color: var(--gray);
             cursor: not-allowed;
         }
         
         .share-link {
+            padding: 0 16px 16px;
             display: flex;
-            gap: 10px;
+            gap: 12px;
         }
         
         #room-url {
             flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
+            padding: 12px 16px;
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
             font-size: 14px;
         }
         
         #copy-button {
             padding: 12px 20px;
-            background-color: var(--accent-color);
+            background: var(--accent);
             color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: var(--transition);
         }
         
         #copy-button:hover {
-            background-color: var(--secondary-color);
+            background: var(--secondary);
         }
         
-        /* Guest Mode */
-        .guest-mode {
-            background-color: rgba(255, 204, 0, 0.1);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
+        .typing-indicator {
+            font-size: 14px;
+            color: var(--gray);
+            margin-bottom: 10px;
+            height: 20px;
+            padding-left: 16px;
+            font-style: italic;
+        }
+        
+        .message-status {
+            font-size: 12px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            gap: 4px;
+            margin-top: 4px;
+            opacity: 0.8;
         }
         
-        .guest-mode i {
-            color: var(--warning-color);
-            margin-right: 10px;
+        .welcome-message {
+            text-align: center;
+            margin: auto;
+            max-width: 500px;
+            padding: 20px;
         }
         
-        /* Responsive */
+        .welcome-message h2 {
+            color: var(--primary);
+            margin-bottom: 12px;
+        }
+        
+        .welcome-message p {
+            color: var(--gray);
+            margin-bottom: 20px;
+        }
+        
         @media (max-width: 768px) {
             .container {
-                margin: 10px;
-                padding: 15px;
+                margin: 0;
+                border-radius: 0;
+                height: 100vh;
             }
             
-            .chat-container {
-                height: 400px;
+            .chat-area {
+                height: calc(100vh - 140px);
             }
             
             .message {
@@ -391,22 +464,27 @@
             }
             
             .input-area {
-                flex-direction: column;
+                padding: 12px;
             }
             
-            #send-button {
-                width: 100%;
+            #message-input {
+                min-height: 40px;
             }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1><i class="fas fa-comments"></i> HTMLK Chat</h1>
+        <div class="app-header">
+            <div class="app-title">
+                <i class="fas fa-comments"></i>
+                <span>Modern Chat</span>
+            </div>
+        </div>
         
         <div id="auth-section" class="auth-section">
             <div id="user-info" class="user-info" style="display: none;">
-                <img id="user-avatar" src="https://www.gravatar.com/avatar/?d=mp" alt="User Avatar">
+                <div id="user-avatar" class="user-avatar"></div>
                 <div class="user-details">
                     <div class="user-name" id="user-name"></div>
                     <div class="user-email" id="user-email"></div>
@@ -414,7 +492,7 @@
                 <button id="signout-button" class="btn-ghost">Sign Out</button>
             </div>
             
-            <div id="guest-mode" class="guest-mode" style="display: none;">
+            <div id="guest-notice" class="guest-notice" style="display: none;">
                 <div>
                     <i class="fas fa-info-circle"></i>
                     <span>You're chatting as a guest. Sign in to use your account.</span>
@@ -429,67 +507,81 @@
                 </div>
                 
                 <div id="signin-form" class="auth-form active">
-                    <div id="signin-message" class="auth-message"></div>
+                    <div id="signin-message" class="message-box"></div>
                     <div class="form-group">
                         <label for="signin-email">Email</label>
-                        <input type="email" id="signin-email" class="form-control" placeholder="Enter your email">
+                        <input type="email" id="signin-email" class="form-control" placeholder="Your email">
                     </div>
                     <div class="form-group">
                         <label for="signin-password">Password</label>
-                        <input type="password" id="signin-password" class="form-control" placeholder="Enter your password">
+                        <input type="password" id="signin-password" class="form-control" placeholder="Your password">
                     </div>
                     <button id="signin-button" class="btn btn-block">Sign In</button>
-                    <div style="text-align: center; margin-top: 15px;">
+                    <div style="text-align: center; margin-top: 20px;">
                         <button id="continue-guest-button" class="btn-ghost">Continue as Guest</button>
                     </div>
                 </div>
                 
                 <div id="signup-form" class="auth-form">
-                    <div id="signup-message" class="auth-message"></div>
+                    <div id="signup-message" class="message-box"></div>
                     <div class="form-group">
                         <label for="signup-email">Email</label>
-                        <input type="email" id="signup-email" class="form-control" placeholder="Enter your email">
+                        <input type="email" id="signup-email" class="form-control" placeholder="Your email">
                     </div>
                     <div class="form-group">
                         <label for="signup-password">Password</label>
-                        <input type="password" id="signup-password" class="form-control" placeholder="Create a password (min 6 characters)">
+                        <input type="password" id="signup-password" class="form-control" placeholder="Min 6 characters">
                     </div>
                     <div class="form-group">
                         <label for="signup-password-confirm">Confirm Password</label>
-                        <input type="password" id="signup-password-confirm" class="form-control" placeholder="Confirm your password">
+                        <input type="password" id="signup-password-confirm" class="form-control" placeholder="Confirm password">
                     </div>
                     <button id="signup-button" class="btn btn-block">Sign Up</button>
                 </div>
             </div>
         </div>
         
-        <div class="room-info">
-            <div class="room-id">Room: <span id="room-id-display"></span></div>
-            <div class="user-count">
-                <i class="fas fa-users"></i>
-                <span id="user-count">0</span>/32
+        <div id="chat-section" style="display: none;">
+            <div class="chat-area">
+                <div class="room-info">
+                    <div class="room-id">
+                        <i class="fas fa-door-open"></i>
+                        <span id="room-id-display"></span>
+                    </div>
+                    <div class="user-count">
+                        <i class="fas fa-users"></i>
+                        <span id="user-count">0</span>/32 online
+                    </div>
+                </div>
+                
+                <div id="chat-container" class="chat-container">
+                    <div id="typing-indicator" class="typing-indicator"></div>
+                    <div id="welcome-message" class="welcome-message">
+                        <h2>Welcome to Modern Chat!</h2>
+                        <p>Start chatting with others in this room. Invite friends by sharing the room link below.</p>
+                    </div>
+                </div>
+                
+                <div class="input-area">
+                    <textarea id="message-input" placeholder="Type your message..." rows="1" disabled></textarea>
+                    <button id="send-button" disabled>
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <div class="share-link">
+                    <input type="text" id="room-url" readonly>
+                    <button id="copy-button">
+                        <i class="fas fa-copy"></i> Copy
+                    </button>
+                </div>
             </div>
-        </div>
-        
-        <div id="chat-container" class="chat-container">
-            <!-- Messages will appear here -->
-        </div>
-        
-        <div class="input-area">
-            <input type="text" id="message-input" placeholder="Type your message..." disabled>
-            <button id="send-button" disabled>
-                <i class="fas fa-paper-plane"></i> Send
-            </button>
-        </div>
-        
-        <div class="share-link">
-            <input type="text" id="room-url" readonly>
-            <button id="copy-button">
-                <i class="fas fa-copy"></i> Copy
-            </button>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
